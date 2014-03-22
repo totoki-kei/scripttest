@@ -185,7 +185,6 @@ ScriptReturnState ScriptState::opYld(short opt){
 //	Stk : # / #
 //	Opt : –¢Žg—p
 ScriptReturnState ScriptState::opEnd(short opt){
-	opCls(0);
 	errorCode = ScriptHasFinished;
 	return Finished;
 };
