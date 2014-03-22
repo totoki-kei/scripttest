@@ -22,7 +22,7 @@ inline ScriptReturnState CheckStack(ScriptState *state, int pop, int push){
 }
 
 ScriptReturnState(ScriptState::*ScriptState::optable[])(short opt) = {
-	//	0x00 - 0x0F
+	//	0x00 - 0x0F(実行制御系)
 	&ScriptState::opEnd,
 	&ScriptState::opYld,
 	&ScriptState::opNull,
@@ -40,7 +40,7 @@ ScriptReturnState(ScriptState::*ScriptState::optable[])(short opt) = {
 	&ScriptState::opNull,
 	&ScriptState::opNull,
 
-	//	0x10 - 0x1F
+	//	0x10 - 0x1F(分岐系)
 	&ScriptState::opJmp,
 	&ScriptState::opCpt,
 	&ScriptState::opFwd,
@@ -58,7 +58,7 @@ ScriptReturnState(ScriptState::*ScriptState::optable[])(short opt) = {
 	&ScriptState::opCmp,
 	&ScriptState::opIs,
 
-	//	0x20 - 0x2F
+	//	0x20 - 0x2F(算術演算系)
 	&ScriptState::opAdd,
 	&ScriptState::opAdds,
 	&ScriptState::opMul,
@@ -76,7 +76,7 @@ ScriptReturnState(ScriptState::*ScriptState::optable[])(short opt) = {
 	&ScriptState::opLog,
 	&ScriptState::opLen,
 
-	//	0x30 - 0x3F
+	//	0x30 - 0x3F(スタック操作系)
 	&ScriptState::opLod,
 	&ScriptState::opSto,
 	&ScriptState::opVlod,
@@ -94,11 +94,11 @@ ScriptReturnState(ScriptState::*ScriptState::optable[])(short opt) = {
 	&ScriptState::opNull,
 	&ScriptState::opNull,
 
-	//	0x40 - 0x4F(空)
-	&ScriptState::opNull,
-	&ScriptState::opNull,
-	&ScriptState::opNull,
-	&ScriptState::opNull,
+	//	0x40 - 0x4F(スタックなし操作系)
+	&ScriptState::opNsAdd,
+	&ScriptState::opNsSub,
+	&ScriptState::opNsMul,
+	&ScriptState::opNsDiv,
 	&ScriptState::opNull,
 	&ScriptState::opNull,
 	&ScriptState::opNull,
@@ -459,7 +459,7 @@ ScriptReturnState ScriptState::opRev(short opt){
 };
 //	Fwd/Rev用チェックポイント
 //	Stk : 0 / 0
-//	Opt : 未使用
+//	Opt : 未使用(被ジャンプ時にシグネチャとして利用される)
 ScriptReturnState ScriptState::opCpt(short opt){
 	return None;
 };
@@ -768,15 +768,62 @@ ScriptReturnState ScriptState::opRet(short opt){
 	return None;
 };
 
-
+// 定数アドレス変数間の直接加算
+//	Stk : 0 / 0
+//	Opt : Opt[0-3] 加算先アドレス(0 - 255)
+//        Opt[4-7] 加算する値のアドレス(0-255)
 ScriptReturnState ScriptState::opNsAdd(short opt){
+	unsigned char dst = opt & 0xFF;
+	unsigned char src = (opt >> 4) & 0xFF;
+	if (dst < 0 || workareasize <= dst || src < 0 || workareasize <= src){
+		errorCode = WorkareaOutOfRange;
+		return Error;
+	}
+	workarea[dst] += workarea[src];
+	return None;
 }
+
+// 定数アドレス変数間の直接減算
+//	Stk : 0 / 0
+//	Opt : Opt[0-3] 減算先アドレス(0 - 255)
+//        Opt[4-7] 減算する値のアドレス(0-255)
 ScriptReturnState ScriptState::opNsSub(short opt){
-
+	unsigned char dst = opt & 0xFF;
+	unsigned char src = (opt >> 4) & 0xFF;
+	if (dst < 0 || workareasize <= dst || src < 0 || workareasize <= src){
+		errorCode = WorkareaOutOfRange;
+		return Error;
+	}
+	workarea[dst] -= workarea[src];
+	return None;
 }
+
+// 定数アドレス変数間の直接乗算
+//	Stk : 0 / 0
+//	Opt : Opt[0-3] 乗算先アドレス(0 - 255)
+//        Opt[4-7] 乗算する値のアドレス(0-255)
 ScriptReturnState ScriptState::opNsMul(short opt){
-
+	unsigned char dst = opt & 0xFF;
+	unsigned char src = (opt >> 4) & 0xFF;
+	if (dst < 0 || workareasize <= dst || src < 0 || workareasize <= src){
+		errorCode = WorkareaOutOfRange;
+		return Error;
+	}
+	workarea[dst] *= workarea[src];
+	return None;
 }
-ScriptReturnState ScriptState::opNsDiv(short opt){
 
+// 定数アドレス変数間の直接除算
+//	Stk : 0 / 0
+//	Opt : Opt[0-3] 除算先アドレス(0 - 255)
+//        Opt[4-7] 除算する値のアドレス(0-255)
+ScriptReturnState ScriptState::opNsDiv(short opt){
+	unsigned char dst = opt & 0xFF;
+	unsigned char src = (opt >> 4) & 0xFF;
+	if (dst < 0 || workareasize <= dst || src < 0 || workareasize <= src){
+		errorCode = WorkareaOutOfRange;
+		return Error;
+	}
+	workarea[dst] /= workarea[src];
+	return None;
 }
