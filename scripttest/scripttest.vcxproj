@@ -90,14 +90,13 @@
   <ItemGroup>
     <ClCompile Include="scripttest.cpp" />
     <ClCompile Include="gettoken.c" />
-    <ClCompile Include="SimpleCodeProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gettoken.h" />
-    <ClInclude Include="SimpleCodeProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+    <Text Include="script.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\scriptlib\scriptlib.vcxproj">

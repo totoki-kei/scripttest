@@ -35,7 +35,10 @@ namespace Script {
 			state->errorCode = WorkstackUnderflow;
 			return Error;
 		}
-		state->workstack.reserve(state->workstack.size() - pop + push);
+		//int requiredSize = (int)state->workstack.size() - (int)pop + (int)push;
+		//while (requiredSize >= state->workstack.size()) {
+		//	state->workstack.resize(state->workstack.size() * 2 + 1);
+		//}
 		return ReturnState::None;
 	}
 
@@ -62,9 +65,9 @@ namespace Script {
 	};
 
 	ReturnState Thread::opGoto(const Code& code) {
-		if (CheckStack(this, code.option ? 1 : 0, 0)) return Error;
+		if (CheckStack(this, code.option ? 0 : 1, 0)) return Error;
 		int addr = code.option ? code.option : (int)StackPop();
-		codeindex = addr;
+		codeindex = addr - 1;
 
 		return None;
 	}
@@ -603,7 +606,7 @@ namespace Script {
 	//	Opt : ジャンプ先アドレス
 	ReturnState Thread::opCall(const Code& code) {
 		callstack.push_back(codeindex);
-		codeindex = code.option;
+		codeindex = code.option - 1;
 
 		return None;
 	};

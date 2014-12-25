@@ -7,6 +7,10 @@
 #include <boost/phoenix.hpp>
 #include <boost/fusion/tuple.hpp>
 
+namespace Script {
+	CodeProvider::~CodeProvider() {}
+}
+
 namespace Script { namespace Loader {
 	
 	class SimpleCodeProvider : public CodeProvider {
@@ -26,6 +30,7 @@ namespace Script { namespace Loader {
 
 	std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen) {
 		std::ifstream file(filepath);
+		if (file.bad()) return nullptr;
 
 		using boost::spirit::qi::int_;
 		using boost::spirit::qi::float_;
@@ -38,8 +43,10 @@ namespace Script { namespace Loader {
 
 		std::string wholeText((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-		std::vector<Code> codes((size_t)wholeText.size() / 8);
+		std::vector<Code> codes;
+		codes.reserve((size_t)wholeText.size() / 8);
 		std::unordered_map<std::string, int> entrypoints;
+		std::unordered_multimap<std::string, int> epToSolve;
 
 		auto r
 			= ('<' >> lexeme[+alpha] >> '>')
@@ -104,10 +111,42 @@ namespace Script { namespace Loader {
 				std::string attr;
 				if (attr_) attr.assign(attr_->begin(), attr_->end());
 
-				Code c = gen(sig, attr);
+				std::string ep;
+				Code c = gen(sig, attr, ep);
+
+				if (ep.size()) {
+					epToSolve.insert({ ep, (int)codes.size() });
+				}
+
 				c.label = lastLabel;
 				codes.push_back(c);
 				lastLabel = 0;
+			}
+		}
+		codes.push_back(Code{ ToOpcode(&Thread::opEnd) });
+
+		if (epToSolve.size() > 0) {
+			int lastSize = epToSolve.size();
+			do {
+				auto it = epToSolve.begin();
+				while (it != epToSolve.end()) {
+					auto ep = entrypoints.find(it->first);
+					if (ep != entrypoints.end()) {
+						codes[it->second].option = ep->second;
+
+						auto next = it;
+						next++;
+						epToSolve.erase(it);
+						it = next;
+						continue;
+					}
+					it++;
+				}
+			} while (epToSolve.size() > 0 && epToSolve.size() != lastSize);
+
+			if (epToSolve.size() > 0) {
+				// àÍïîÉVÉìÉ{ÉãÇâåàÇ≈Ç´Ç»Ç©Ç¡ÇΩ
+				throw std::domain_error("cannot resolve symbol.");
 			}
 		}
 
@@ -130,7 +169,7 @@ namespace Script { namespace Loader {
 		OPMAPI(wait, opWait);
 		OPMAPI(end, opEnd);
 		
-		OPMAPI(goto, opGoto);
+		OPMAP(goto, opGoto, AttrType::EntryPointSymbol);
 
 		OPMAPI(jump, opJmp);
 		OPMAPI(jump_eq, opJeq);
@@ -177,7 +216,7 @@ namespace Script { namespace Loader {
 		OPMAPI(pop, opDel);
 		OPMAPI(clear, opCls);
 
-		OPMAPI(call, opCall);
+		OPMAP(call, opCall, AttrType::EntryPointSymbol);
 		OPMAPI(ret, opRet);
 
 		OPMAP(push, opPush, AttrType::Float);
@@ -192,7 +231,7 @@ namespace Script { namespace Loader {
 
 	}
 
-	Code Generator::operator ()(const std::string& sig, const std::string& attr) {
+	Code Generator::operator ()(const std::string& sig, const std::string& attr, std::string& outBindSymbol) {
 		auto &sk = map.at(sig);
 		Code c;
 		c.label = 0;
@@ -210,26 +249,51 @@ namespace Script { namespace Loader {
 			case AttrType::SpecialNumbers:
 				ParseAttrAsSpecialNumbers(c, attr);
 				break;
+			case AttrType::EntryPointSymbol:
+				if (!ParseAttrAsInteger(c, attr)) {
+					outBindSymbol.assign(attr);
+				}
+				break;
 		}
 
 		return c;
 	}
 
-	void Generator::ParseAttrAsInteger(Code& c, const std::string& attr) {
-		c.option = std::stoi(attr, nullptr, 0); // äÓêîé©ìÆîªï 
+	bool Generator::ParseAttrAsInteger(Code& c, const std::string& attr) {
+		if (attr.size() == 0) return false;
+		size_t szt;
+		try {
+			c.option = std::stoi(attr, &szt, 0); // äÓêîé©ìÆîªï 
+		}
+		catch (...) {
+			return false;
+		}
+		return szt != 0;
 	}
-	void Generator::ParseAttrAsFloat(Code& c, const std::string& attr) {
-		c.val = std::stof(attr);
+	bool Generator::ParseAttrAsFloat(Code& c, const std::string& attr) {
+		if (attr.size() == 0) return false;
+		size_t szt;
+		try {
+			c.val = std::stof(attr, &szt);
+		}
+		catch (...) {
+			return false;
+		}
+		return szt != 0;
 	}
-	void Generator::ParseAttrAsComparer(Code& c, const std::string& attr) {
-		std::initializer_list<std::string> list = { "==","!=",">",">=","<","<=","and","nand","or","nor","xor","nxor" };
+	bool Generator::ParseAttrAsComparer(Code& c, const std::string& attr) {
+		if (attr.size() == 0) return false;
+		std::initializer_list<std::string> list = { "==", "!=", ">", ">=", "<", "<=", "and", "nand", "or", "nor", "xor", "nxor" };
 		auto it = std::find(list.begin(), list.end(), attr);
 		c.option = std::distance(list.begin(), it);
+		return c.option != list.size();
 	}
-	void Generator::ParseAttrAsSpecialNumbers(Code& c, const std::string& attr) {
+	bool Generator::ParseAttrAsSpecialNumbers(Code& c, const std::string& attr) {
+		if (attr.size() == 0) return false;
 		std::initializer_list<std::string> list = { "zero", "nonzero", "plus", "notplus", "minus", "notminus", "posinf", "notposinf", "neginf", "notneginf", "nan", "notnan" };
 		auto it = std::find(list.begin(), list.end(), attr);
 		c.option = std::distance(list.begin(), it);
+		return c.option != list.size();
 	}
 
 }}

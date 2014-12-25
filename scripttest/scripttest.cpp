@@ -4,34 +4,33 @@
 
 #include "script.h"
 
-ScriptCode Num(float n){
-	ScriptCode ret;
-	ret.val = n;
-	return ret;
+namespace S = Script;
+namespace SL = Script::Loader;
+
+#include <iostream>
+
+S::ReturnState opPrint(S::Thread& th, const S::Code& c) {
+	std::cout << "stack trace start" << std::endl;
+	for (auto i = (size_t)0; i < th.workstack.size(); i++) {
+		std::cout << "\t#" << i << " : " << th.workstack[i] << std::endl;
+	}
+	std::cout << "stack trace end" << std::endl;
+
+	return S::ReturnState::None;
 }
-
-ScriptCode Op(ScriptOpcode op, short opt){
-	ScriptCode ret;
-	ret.flag = 0;
-	ret.exp = 0xFF;
-	ret.opid = (unsigned short)(op & 0x7F);
-	ret.option = opt;
-	return ret;
-}
-
-
-ScriptCode code[] {
-	{10}, { 20 }, Op(OpcodeAdd, 0), Op(OpcodeSto, 0), Op(OpcodeYld, 0)
-};
-
 
 int main(int argc, char* argv[])
 {
-	ScriptState *st = new ScriptState(8, 8, 8, 8, code);
+	SL::Generator gen;
+	
+	gen.map["print"] = { opPrint, SL::Generator::AttrType::Integer };
 
-	st->Run();
+	auto prov = SL::Load("script.txt", gen);
+	
+	auto st = prov->CreateState();
+	auto th = st->CreateThread();
 
-	delete st;
+	th->Run();
 
 	return 0;
 }

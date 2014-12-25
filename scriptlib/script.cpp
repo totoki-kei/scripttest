@@ -44,12 +44,14 @@ namespace Script {
 		while (true) {
 			const Code& code = state->provider->Get(codeindex);
 			
-			switch (ReturnState rs = code.opcode(*this, code)) {
-				case Error:
-				case Wait:
-				case Finished:
-					return rs;
-					break;
+			if (code.opcode) {
+				switch (ReturnState rs = code.opcode(*this, code)) {
+					case Error:
+					case Wait:
+					case Finished:
+						return rs;
+						break;
+				}
 			}
 			codeindex++;
 		};

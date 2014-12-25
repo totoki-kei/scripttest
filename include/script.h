@@ -184,6 +184,8 @@ namespace Script {
 
 	};
 
+
+
 	namespace Loader {
 
 		class Generator {
@@ -193,6 +195,7 @@ namespace Script {
 				Float,
 				Comparer,
 				SpecialNumbers,
+				EntryPointSymbol,
 			};
 			struct CodeSkelton {
 				Opcode opcode;
@@ -204,13 +207,15 @@ namespace Script {
 			Generator();
 
 
-			Code operator ()(const std::string& sig, const std::string& attr);
+			Code operator ()(const std::string& sig, const std::string& attr, std::string& bindSymbol);
 
-			void ParseAttrAsInteger(Code& c, const std::string& attr);
-			void ParseAttrAsFloat(Code& c, const std::string& attr);
-			void ParseAttrAsComparer(Code& c, const std::string& attr);
-			void ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
+			bool ParseAttrAsInteger(Code& c, const std::string& attr);
+			bool ParseAttrAsFloat(Code& c, const std::string& attr);
+			bool ParseAttrAsComparer(Code& c, const std::string& attr);
+			bool ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
 		};
+
+		std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen);
 	}
 }
 
