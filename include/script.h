@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include <stdint.h>
 
 namespace Script {
@@ -33,12 +34,18 @@ namespace Script {
 		ScriptHasFinished,
 	};
 
+	struct Code;
 	struct State;
 	struct Thread;
 
+	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
+	inline Opcode ToOpcode(ReturnState(Thread::*memfn)(const Code&)) {
+		return std::bind(memfn, std::placeholders::_1, std::placeholders::_2);
+	}
+
 	struct Code {
 		int label;
-		std::function<ReturnState(Thread&, const Code&)> opcode;
+		Opcode opcode;
 
 		union {
 			float val;
@@ -57,15 +64,15 @@ namespace Script {
 
 		Code(ReturnState(Thread::*memfn)(const Code&))
 			: label{ 0 }
-			, opcode{ std::bind(memfn, std::placeholders::_1, std::placeholders::_2) }
+			, opcode{ ToOpcode(memfn) }
 			, val{ 0.0f } {}
 		Code(ReturnState(Thread::*memfn)(const Code&), float n)
 			: label{ 0 }
-			, opcode{ std::bind(memfn, std::placeholders::_1, std::placeholders::_2) }
+			, opcode{ ToOpcode(memfn) }
 			, val{ n } {}
 		Code(ReturnState(Thread::*memfn)(const Code&), uint32_t i)
 			: label{ 0 }
-			, opcode{ std::bind(memfn, std::placeholders::_1, std::placeholders::_2) }
+			, opcode{ ToOpcode(memfn) }
 			, option{ i } {}
 	};
 
@@ -74,6 +81,8 @@ namespace Script {
 
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
+		virtual ~CodeProvider();
+
 		virtual const Code& Get(int index) = 0;
 		virtual int EntryPoint(const char* name) = 0;
 
@@ -107,15 +116,15 @@ namespace Script {
 
 		ReturnState Run();
 
-	private:
 #pragma region Operation Definitions
 		ReturnState opEnd(const Code& code);
-		ReturnState opYld(const Code& code);
+		ReturnState opWait(const Code& code);
 
+		ReturnState opGoto(const Code& code);
 		ReturnState opJmp(const Code& code);
 		//ReturnState opCpt(const Code& code);
 		ReturnState opFwd(const Code& code);
-		ReturnState opRev(const Code& code);
+		ReturnState opRew(const Code& code);
 		ReturnState opJz(const Code& code);
 		ReturnState opJnz(const Code& code);
 		ReturnState opJpos(const Code& code);
@@ -157,6 +166,8 @@ namespace Script {
 		ReturnState opCall(const Code& code);
 		ReturnState opRet(const Code& code);
 
+		ReturnState opPush(const Code& code);
+
 		ReturnState opNsAdd(const Code& code);
 		ReturnState opNsSub(const Code& code);
 		ReturnState opNsMul(const Code& code);
@@ -165,7 +176,6 @@ namespace Script {
 		ReturnState opNull(const Code& code);
 #pragma endregion
 
-	public:
 		float StackPop();
 		float StackPush(float);
 		float& StackTop();
@@ -174,6 +184,34 @@ namespace Script {
 
 	};
 
+	namespace Loader {
+
+		class Generator {
+		public:
+			enum class AttrType {
+				Integer,
+				Float,
+				Comparer,
+				SpecialNumbers,
+			};
+			struct CodeSkelton {
+				Opcode opcode;
+				AttrType type;
+			};
+
+			std::unordered_map<std::string, CodeSkelton> map;
+
+			Generator();
+
+
+			Code operator ()(const std::string& sig, const std::string& attr);
+
+			void ParseAttrAsInteger(Code& c, const std::string& attr);
+			void ParseAttrAsFloat(Code& c, const std::string& attr);
+			void ParseAttrAsComparer(Code& c, const std::string& attr);
+			void ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
+		};
+	}
 }
 
 #endif

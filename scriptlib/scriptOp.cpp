@@ -38,153 +38,7 @@ namespace Script {
 		state->workstack.reserve(state->workstack.size() - pop + push);
 		return ReturnState::None;
 	}
-#if 0
-	ReturnState(Thread::*Thread::optable[])(const Code& code) = {
-		//	0x00 - 0x0F(実行制御系)
-		&Thread::opEnd,
-		&Thread::opYld,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
 
-		//	0x10 - 0x1F(分岐系)
-		&Thread::opJmp,
-		&Thread::opCpt,
-		&Thread::opFwd,
-		&Thread::opRev,
-		&Thread::opJz,
-		&Thread::opJnz,
-		&Thread::opJpos,
-		&Thread::opJneg,
-		&Thread::opJeq,
-		&Thread::opJne,
-		&Thread::opJgt,
-		&Thread::opJge,
-		&Thread::opJlt,
-		&Thread::opJle,
-		&Thread::opCmp,
-		&Thread::opIs,
-
-		//	0x20 - 0x2F(算術演算系)
-		&Thread::opAdd,
-		&Thread::opAdds,
-		&Thread::opMul,
-		&Thread::opMuls,
-		&Thread::opSub,
-		&Thread::opNeg,
-		&Thread::opDiv,
-		&Thread::opMod,
-		&Thread::opSin,
-		&Thread::opCos,
-		&Thread::opTan,
-		&Thread::opArg,
-		&Thread::opSqrt,
-		&Thread::opPow,
-		&Thread::opLog,
-		&Thread::opLen,
-
-		//	0x30 - 0x3F(スタック操作系)
-		&Thread::opLod,
-		&Thread::opSto,
-		&Thread::opVlod,
-		&Thread::opVsto,
-		&Thread::opDup,
-		&Thread::opSpps,
-		&Thread::opDel,
-		&Thread::opCls,
-		&Thread::opCall,
-		&Thread::opRet,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-
-		//	0x40 - 0x4F(スタックなし操作系)
-		&Thread::opNsAdd,
-		&Thread::opNsSub,
-		&Thread::opNsMul,
-		&Thread::opNsDiv,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-
-		//	0x50 - 0x5F(空)
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-
-		//	0x60 - 0x6F(空)
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-
-		//	0x70 - 0x7F(空)
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-		&Thread::opNull,
-	};
-#endif
 	//	未定義の命令語
 	//	Stk : 0 / 0
 	//	Opt : 未使用
@@ -195,7 +49,7 @@ namespace Script {
 	//	中断
 	//	Stk : # / #
 	//	Opt : 待機カウント(0以上、0の場合は中断のみ行う)
-	ReturnState Thread::opYld(const Code& code) {
+	ReturnState Thread::opWait(const Code& code) {
 		waitcount = code.option >= 0 ? code.option : 1;
 		return Wait;
 	};
@@ -206,12 +60,20 @@ namespace Script {
 		errorCode = ScriptHasFinished;
 		return Finished;
 	};
+
+	ReturnState Thread::opGoto(const Code& code) {
+		if (CheckStack(this, code.option ? 1 : 0, 0)) return Error;
+		int addr = code.option ? code.option : (int)StackPop();
+		codeindex = addr;
+
+		return None;
+	}
+
 	//	ジャンプ
-	//	Stk : 1 / 0
-	//	Opt : 未使用
+	//	Stk : 0 / 0
+	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJmp(const Code& code) {
-		if (CheckStack(this, 1, 0)) return Error;
-		codeindex = (int)StackPop();
+		codeindex += code.option;
 		
 		return None;
 	};
@@ -420,7 +282,7 @@ namespace Script {
 	//	巻き戻し
 	//	Stk : 0 / 0
 	//	Opt : 識別ID 0で一番近いフラグ
-	ReturnState Thread::opRev(const Code& code) {
+	ReturnState Thread::opRew(const Code& code) {
 		while (true) {
 			const Code& c = state->provider->Get(codeindex);
 			if (c.label && (code.option == 0 || code.option == c.label)) {
@@ -672,22 +534,34 @@ namespace Script {
 	//	特殊値プッシュ
 	//	Stk : 0 / 1
 	//	Opt : 積む値の種類
-	//			0 : NaN
-	//			1 : 無限+
-	//			2 :  〃 -
+	//			0 : 0
+	//			1 : 1
+	//			2 : -1
+	//			3 : 無限+
+	//			4 :  〃 -
+	//			5 : NaN
 	ReturnState Thread::opSpps(const Code& code) {
 		if (CheckStack(this, 0, 1)) return Error;
 		float val;
 
 		switch (code.option) {
-			case 0:
+			case 5:
 				*((uint32_t*)&val) = 0x7FBFFFFF;
 				break;
-			case 1:
+			case 3:
 				val = 1e18f;
 				break;
-			case 2:
+			case 4:
 				val = -1e18f;
+				break;
+			case 0:
+				val = 0.0f;
+				break;
+			case 1:
+				val = 1.0f;
+				break;
+			case 2:
+				val = -1.0f;
 				break;
 			default:
 				errorCode = InvalidOperand;
@@ -746,6 +620,12 @@ namespace Script {
 
 		return None;
 	};
+
+	ReturnState Thread::opPush(const Code& code) {
+		StackPush(code.val);
+
+		return None;
+	}
 
 	// 定数アドレス変数間の直接加算
 	//	Stk : 0 / 0

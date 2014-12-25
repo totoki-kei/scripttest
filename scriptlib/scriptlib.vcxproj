@@ -91,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="script.cpp" />
+    <ClCompile Include="scriptLoader.cpp" />
     <ClCompile Include="scriptOp.cpp" />
   </ItemGroup>
   <ItemGroup>
