@@ -49,28 +49,28 @@ namespace Script {
 
 		union {
 			float val;
-			uint32_t option;
+			int32_t option;
 		};
 
-		Code() : label{ 0 }, opcode{ nullptr }, val{ 0.0f } { }
+		Code() : label{ 0 }, opcode{ nullptr }, option{ -1 } { }
 		Code(const Code&) = default;
 
 		template<typename Fn>
-		Code(Fn f) : label{ 0 }, opcode{ f }, val{ 0.0f } {}
+		Code(Fn f) : label{ 0 }, opcode{ f }, option{ -1 } {}
 		template<typename Fn>
 		Code(Fn f, float n) : label{ 0 }, opcode{ f }, val{ n } {}
 		template<typename Fn>
-		Code(Fn f, uint32_t i) : label{ 0 }, opcode{ f }, option{ i } {}
+		Code(Fn f, int32_t i) : label{ 0 }, opcode{ f }, option{ i } {}
 
 		Code(ReturnState(Thread::*memfn)(const Code&))
 			: label{ 0 }
 			, opcode{ ToOpcode(memfn) }
-			, val{ 0.0f } {}
+			, option{ -1 } {}
 		Code(ReturnState(Thread::*memfn)(const Code&), float n)
 			: label{ 0 }
 			, opcode{ ToOpcode(memfn) }
 			, val{ n } {}
-		Code(ReturnState(Thread::*memfn)(const Code&), uint32_t i)
+		Code(ReturnState(Thread::*memfn)(const Code&), int32_t i)
 			: label{ 0 }
 			, opcode{ ToOpcode(memfn) }
 			, option{ i } {}
@@ -84,6 +84,7 @@ namespace Script {
 		virtual ~CodeProvider();
 
 		virtual const Code& Get(int index) = 0;
+		virtual int Length() = 0;
 		virtual int EntryPoint(const char* name) = 0;
 
 		virtual std::shared_ptr<State> CreateState();
@@ -153,6 +154,7 @@ namespace Script {
 		ReturnState opSqrt(const Code& code);
 		ReturnState opPow(const Code& code);
 		ReturnState opLog(const Code& code);
+		ReturnState opLog10(const Code& code);
 		ReturnState opLen(const Code& code);
 
 		ReturnState opLod(const Code& code);

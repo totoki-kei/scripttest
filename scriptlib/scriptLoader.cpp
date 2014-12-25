@@ -23,6 +23,10 @@ namespace Script { namespace Loader {
 			return codes[index];
 		}
 
+		int Length() override {
+			return codes.size();
+		}
+
 		int EntryPoint(const char* ent) override {
 			return entrypoints[ent];
 		}
@@ -161,6 +165,9 @@ namespace Script { namespace Loader {
 #define OPMAPI(name, op) \
 	map[ #name ] = {ToOpcode(&Thread:: op ) , AttrType::Integer }
 
+#define OPMAPF(name, op) \
+	map[ #name ] = {ToOpcode(&Thread:: op ) , AttrType::Float }
+
 #define OPMAP(name, op, attr) \
 	map[ #name ] = {ToOpcode(&Thread:: op ) , attr }
 
@@ -189,21 +196,22 @@ namespace Script { namespace Loader {
 		OPMAPI(fwd, opFwd);
 		OPMAPI(rew, opRew);
 
-		OPMAPI(add, opAdd);
+		OPMAPF(add, opAdd);
 		OPMAPI(adds, opAdds);
-		OPMAPI(mul, opMul);
+		OPMAPF(mul, opMul);
 		OPMAPI(muls, opMuls);
-		OPMAPI(sub, opSub);
-		OPMAPI(neg, opNeg);
-		OPMAPI(div, opDiv);
-		OPMAPI(mod, opMod);
-		OPMAPI(sin, opSin);
-		OPMAPI(cos, opCos);
-		OPMAPI(tan, opTan);
-		OPMAPI(atan, opArg);
-		OPMAPI(sqrt, opSqrt);
-		OPMAPI(pow, opPow);
-		OPMAPI(log, opLog);
+		OPMAPF(sub, opSub);
+		OPMAPF(neg, opNeg);
+		OPMAPF(div, opDiv);
+		OPMAPF(mod, opMod);
+		OPMAPF(sin, opSin);
+		OPMAPF(cos, opCos);
+		OPMAPF(tan, opTan);
+		OPMAPF(atan, opArg);
+		OPMAPF(sqrt, opSqrt);
+		OPMAPF(pow, opPow);
+		OPMAPF(log, opLog);
+		OPMAPF(ln, opLog10);
 		OPMAPI(len, opLen);
 
 		OPMAPI(get, opLod);

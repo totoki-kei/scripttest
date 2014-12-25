@@ -1,11 +1,12 @@
 0 set[1]
 
-<fn>
+*1
 get[1]
 10 20 30 print
 40 50 60 print
+5 add print
 adds[3] print
 clear
 
-get[1] 1 add set[1]
-get[1] 10 jump_lt[1] end goto[fn]
+get[1] add[1.0] set[1]
+get[1] 10 jump_lt[1] end rew[1]

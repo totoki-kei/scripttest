@@ -53,7 +53,7 @@ namespace Script {
 	//	Stk : # / #
 	//	Opt : 待機カウント(0以上、0の場合は中断のみ行う)
 	ReturnState Thread::opWait(const Code& code) {
-		waitcount = code.option >= 0 ? code.option : 1;
+		waitcount = code.option > 0 ? code.option : 0;
 		return Wait;
 	};
 	//	終了
@@ -65,8 +65,8 @@ namespace Script {
 	};
 
 	ReturnState Thread::opGoto(const Code& code) {
-		if (CheckStack(this, code.option ? 0 : 1, 0)) return Error;
-		int addr = code.option ? code.option : (int)StackPop();
+		if (CheckStack(this, code.option < 0 ? 0 : 1, 0)) return Error;
+		int addr = code.option < 0 ? code.option : (int)StackPop();
 		codeindex = addr - 1;
 
 		return None;
@@ -76,7 +76,8 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJmp(const Code& code) {
-		codeindex += code.option;
+		if (code.option >= 0)
+			codeindex += code.option;
 		
 		return None;
 	};
@@ -85,6 +86,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJeq(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		if (left == right)
@@ -97,6 +102,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJne(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		if (left != right)
@@ -109,6 +118,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJgt(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		if (left > right)
@@ -121,6 +134,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJge(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		if (left >= right)
@@ -133,6 +150,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJlt(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		if (left < right)
@@ -145,6 +166,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJle(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		if (left <= right)
@@ -157,6 +182,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJz(const Code& code) {
 		if (CheckStack(this, 1, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float num = StackPop();
 		if (num == 0.0)
 			codeindex += code.option;
@@ -168,6 +197,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJnz(const Code& code) {
 		if (CheckStack(this, 1, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float num = StackPop();
 		if (num != 0.0)
 			codeindex += code.option;
@@ -179,6 +212,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJpos(const Code& code) {
 		if (CheckStack(this, 1, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float num = StackPop();
 		if (num > 0.0)
 			codeindex += code.option;
@@ -190,6 +227,10 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState Thread::opJneg(const Code& code) {
 		if (CheckStack(this, 1, 0)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float num = StackPop();
 		if (num < 0.0)
 			codeindex += code.option;
@@ -207,6 +248,10 @@ namespace Script {
 	//			A : Xor(どちらか一方のみが0以外)
 	ReturnState Thread::opCmp(const Code& code) {
 		if (CheckStack(this, 2, 1)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float right = StackPop();
 		float left = StackPop();
 		switch (code.option >> 1) {
@@ -243,6 +288,10 @@ namespace Script {
 	//			A : NaN
 	ReturnState Thread::opIs(const Code& code) {
 		if (CheckStack(this, 1, 1)) return Error;
+		if (code.option < 0) {
+			errorCode = InvalidOpcode;
+			return Error;
+		}
 		float num = StackPop();
 		switch (code.option >> 1) {
 			case 0:
@@ -271,7 +320,7 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : 識別ID 0で一番近いフラグ
 	ReturnState Thread::opFwd(const Code& code) {
-		while (true) {
+		while (0 <= codeindex && codeindex < state->provider->Length()) {
 			const Code& c = state->provider->Get(codeindex);
 			if (c.label && (code.option == 0 || code.option == c.label)) {
 				break;
@@ -286,9 +335,9 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : 識別ID 0で一番近いフラグ
 	ReturnState Thread::opRew(const Code& code) {
-		while (true) {
+		while (0 <= codeindex && codeindex < state->provider->Length()) {
 			const Code& c = state->provider->Get(codeindex);
-			if (c.label && (code.option == 0 || code.option == c.label)) {
+			if (c.label && (code.option <= 0 || code.option == c.label)) {
 				break;
 			}
 			codeindex--;
@@ -307,10 +356,10 @@ namespace Script {
 #endif
 	//	加算
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opAdd(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackTop() += f;
 		return None;
 	};
@@ -339,10 +388,10 @@ namespace Script {
 	};
 	//	乗算
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opMul(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackTop() *= f;
 		return None;
 	};
@@ -371,98 +420,113 @@ namespace Script {
 	};
 	//	減算
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opSub(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option < 0? state->workarea[code.option] : StackPop());
 		StackTop() -= f;
 		return None;
 	};
 	//	正負変換
-	//	Stk : 1 / 1
-	//	Opt : 未使用
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opNeg(const Code& code) {
-		if (CheckStack(this, 1, 1)) return Error;
-		StackTop() = -StackTop();
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
+		StackPush(-f);
 		return None;
 	};
 	//	除算
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opDiv(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackTop() /= f;
 		return None;
 	};
 	//	剰余
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opMod(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackTop() = fmod(StackTop(), f);
 		return None;
 	};
 	//	正弦
-	//	Stk : 1 / 1
-	//	Opt : 未使用
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opSin(const Code& code) {
-		if (CheckStack(this, 1, 1)) return Error;
-		StackTop() = sin(StackTop());
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
+		StackPush(sin(f));
 		return None;
 	};
 	//	余弦
-	//	Stk : 1 / 1
-	//	Opt : 未使用
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opCos(const Code& code) {
-		if (CheckStack(this, 1, 1)) return Error;
-		StackTop() = cos(StackTop());
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
+		StackPush(cos(f));
 		return None;
 	};
 	//	正接
-	//	Stk : 1 / 1
-	//	Opt : 未使用
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opTan(const Code& code) {
-		if (CheckStack(this, 1, 1)) return Error;
-		StackTop() = tan(StackTop());
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
+		StackPush(tan(f));
 		return None;
 	};
 	//	偏角
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opArg(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackTop() = atan2(f, StackTop());
 		return None;
 	};
 	//	平方根
-	//	Stk : 1 / 1
-	//	Opt : 未使用
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opSqrt(const Code& code) {
-		if (CheckStack(this, 1, 1)) return Error;
-		StackTop() = sqrt(StackTop());
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
+		StackPush(sqrt(f));
 		return None;
 	};
 	//	累乗
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opPow(const Code& code) {
-		if (CheckStack(this, code.option ? 2 : 1, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackTop() = pow(StackTop(), f);
 		return None;
 	};
-	//	対数
+	//	自然対数
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : 0,またはメモリアドレス
+	//	Opt : 整数-1,または即値
 	ReturnState Thread::opLog(const Code& code) {
-		if (CheckStack(this, code.option ? 1 : 0, 1)) return Error;
-		float f = (code.option ? state->workarea[code.option] : StackPop());
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
 		StackPush(log(f));
 		return None;
 	};
+	//	常用対数
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState Thread::opLog10(const Code& code) {
+		if (CheckStack(this, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? StackPop() : code.val);
+		StackPush(log10(f));
+		return None;
+	};
+
 	//	sqrt(a^2 + b^2 + ...)を計算する
 	//	Stk : Opt / 1
 	//	Opt : 次元の数
@@ -629,7 +693,7 @@ namespace Script {
 
 		return None;
 	}
-
+	
 	// 定数アドレス変数間の直接加算
 	//	Stk : 0 / 0
 	//	Opt : Opt[0-3] 加算先アドレス(0 - 255)
