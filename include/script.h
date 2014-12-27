@@ -1,5 +1,5 @@
-#ifndef _SCRIPT_H_
-#define _SCRIPT_H_
+#ifndef SCRIPT_H_
+#define SCRIPT_H_
 
 #include <functional>
 #include <memory>
@@ -38,9 +38,24 @@ namespace Script {
 	struct State;
 	struct Thread;
 
+	union Value {
+		float float_;
+		int32_t int_;
+		void* ptr_;
+
+		inline Value() : int_{ -1 } {};
+		inline Value(float f) : float_{ f } {};
+		inline Value(int32_t i) : int_{ i } {};
+		inline Value(void* p) : ptr_{ p } {};
+
+		operator float&() { return float_; }
+		operator int32_t&() { return int_; }
+		operator void*&() { return ptr_; }
+	};
+
 	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
-	inline Opcode ToOpcode(ReturnState(Thread::*memfn)(const Code&)) {
-		return std::bind(memfn, std::placeholders::_1, std::placeholders::_2);
+	inline Opcode ToOpcode(ReturnState(*fn)(Thread&, const Code&)) {
+		return fn;
 	}
 
 	struct Code {
@@ -62,18 +77,6 @@ namespace Script {
 		template<typename Fn>
 		Code(Fn f, int32_t i) : label{ 0 }, opcode{ f }, option{ i } {}
 
-		Code(ReturnState(Thread::*memfn)(const Code&))
-			: label{ 0 }
-			, opcode{ ToOpcode(memfn) }
-			, option{ -1 } {}
-		Code(ReturnState(Thread::*memfn)(const Code&), float n)
-			: label{ 0 }
-			, opcode{ ToOpcode(memfn) }
-			, val{ n } {}
-		Code(ReturnState(Thread::*memfn)(const Code&), int32_t i)
-			: label{ 0 }
-			, opcode{ ToOpcode(memfn) }
-			, option{ i } {}
 	};
 
 	//typedef ScriptReturnState (*ScriptExternOp) (ScriptState* state,short opt);
@@ -81,6 +84,8 @@ namespace Script {
 
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
+		typedef std::shared_ptr<CodeProvider> Ptr;
+
 		virtual ~CodeProvider();
 
 		virtual const Code& Get(int index) = 0;
@@ -91,8 +96,10 @@ namespace Script {
 	};
 
 	struct State : public std::enable_shared_from_this<State> {
+		typedef std::shared_ptr<State> Ptr;
+
 		std::shared_ptr<CodeProvider> provider;
-		std::vector<float> workarea;
+		std::vector<Value> workarea;
 
 		State(std::shared_ptr<CodeProvider>);
 		~State();
@@ -104,9 +111,11 @@ namespace Script {
 	};
 
 	struct Thread {
+		typedef std::shared_ptr<Thread> Ptr;
+
 		std::shared_ptr<State> state;
 
-		std::vector<float> workstack;
+		std::vector<Value> workstack;
 		std::vector<int> callstack;
 		
 		int codeindex;
@@ -118,69 +127,69 @@ namespace Script {
 		ReturnState Run();
 
 #pragma region Operation Definitions
-		ReturnState opEnd(const Code& code);
-		ReturnState opWait(const Code& code);
+		static ReturnState opEnd(Thread&, const Code& code);
+		static ReturnState opWait(Thread&, const Code& code);
 
-		ReturnState opGoto(const Code& code);
-		ReturnState opJmp(const Code& code);
-		//ReturnState opCpt(const Code& code);
-		ReturnState opFwd(const Code& code);
-		ReturnState opRew(const Code& code);
-		ReturnState opJz(const Code& code);
-		ReturnState opJnz(const Code& code);
-		ReturnState opJpos(const Code& code);
-		ReturnState opJneg(const Code& code);
-		ReturnState opJeq(const Code& code);
-		ReturnState opJne(const Code& code);
-		ReturnState opJgt(const Code& code);
-		ReturnState opJge(const Code& code);
-		ReturnState opJlt(const Code& code);
-		ReturnState opJle(const Code& code);
-		ReturnState opCmp(const Code& code);
-		ReturnState opIs(const Code& code);
+		static ReturnState opGoto(Thread&, const Code& code);
+		static ReturnState opJmp(Thread&, const Code& code);
+		//static ReturnState opCpt(Thread&, const Code& code);
+		static ReturnState opFwd(Thread&, const Code& code);
+		static ReturnState opRew(Thread&, const Code& code);
+		static ReturnState opJz(Thread&, const Code& code);
+		static ReturnState opJnz(Thread&, const Code& code);
+		static ReturnState opJpos(Thread&, const Code& code);
+		static ReturnState opJneg(Thread&, const Code& code);
+		static ReturnState opJeq(Thread&, const Code& code);
+		static ReturnState opJne(Thread&, const Code& code);
+		static ReturnState opJgt(Thread&, const Code& code);
+		static ReturnState opJge(Thread&, const Code& code);
+		static ReturnState opJlt(Thread&, const Code& code);
+		static ReturnState opJle(Thread&, const Code& code);
+		static ReturnState opCmp(Thread&, const Code& code);
+		static ReturnState opIs(Thread&, const Code& code);
 
-		ReturnState opAdd(const Code& code);
-		ReturnState opAdds(const Code& code);
-		ReturnState opMul(const Code& code);
-		ReturnState opMuls(const Code& code);
-		ReturnState opSub(const Code& code);
-		ReturnState opNeg(const Code& code);
-		ReturnState opDiv(const Code& code);
-		ReturnState opMod(const Code& code);
-		ReturnState opSin(const Code& code);
-		ReturnState opCos(const Code& code);
-		ReturnState opTan(const Code& code);
-		ReturnState opArg(const Code& code);
-		ReturnState opSqrt(const Code& code);
-		ReturnState opPow(const Code& code);
-		ReturnState opLog(const Code& code);
-		ReturnState opLog10(const Code& code);
-		ReturnState opLen(const Code& code);
+		static ReturnState opAdd(Thread&, const Code& code);
+		static ReturnState opAdds(Thread&, const Code& code);
+		static ReturnState opMul(Thread&, const Code& code);
+		static ReturnState opMuls(Thread&, const Code& code);
+		static ReturnState opSub(Thread&, const Code& code);
+		static ReturnState opNeg(Thread&, const Code& code);
+		static ReturnState opDiv(Thread&, const Code& code);
+		static ReturnState opMod(Thread&, const Code& code);
+		static ReturnState opSin(Thread&, const Code& code);
+		static ReturnState opCos(Thread&, const Code& code);
+		static ReturnState opTan(Thread&, const Code& code);
+		static ReturnState opArg(Thread&, const Code& code);
+		static ReturnState opSqrt(Thread&, const Code& code);
+		static ReturnState opPow(Thread&, const Code& code);
+		static ReturnState opLog(Thread&, const Code& code);
+		static ReturnState opLog10(Thread&, const Code& code);
+		static ReturnState opLen(Thread&, const Code& code);
 
-		ReturnState opLod(const Code& code);
-		ReturnState opSto(const Code& code);
-		ReturnState opVlod(const Code& code);
-		ReturnState opVsto(const Code& code);
-		ReturnState opDup(const Code& code);
-		ReturnState opSpps(const Code& code);
-		ReturnState opDel(const Code& code);
-		ReturnState opCls(const Code& code);
-		ReturnState opCall(const Code& code);
-		ReturnState opRet(const Code& code);
+		static ReturnState opLod(Thread&, const Code& code);
+		static ReturnState opSto(Thread&, const Code& code);
+		static ReturnState opVlod(Thread&, const Code& code);
+		static ReturnState opVsto(Thread&, const Code& code);
+		static ReturnState opDup(Thread&, const Code& code);
+		static ReturnState opSpps(Thread&, const Code& code);
+		static ReturnState opDel(Thread&, const Code& code);
+		static ReturnState opCls(Thread&, const Code& code);
+		static ReturnState opCall(Thread&, const Code& code);
+		static ReturnState opRet(Thread&, const Code& code);
 
-		ReturnState opPush(const Code& code);
+		static ReturnState opPush(Thread&, const Code& code);
 
-		ReturnState opNsAdd(const Code& code);
-		ReturnState opNsSub(const Code& code);
-		ReturnState opNsMul(const Code& code);
-		ReturnState opNsDiv(const Code& code);
+		static ReturnState opNsAdd(Thread&, const Code& code);
+		static ReturnState opNsSub(Thread&, const Code& code);
+		static ReturnState opNsMul(Thread&, const Code& code);
+		static ReturnState opNsDiv(Thread&, const Code& code);
 
-		ReturnState opNull(const Code& code);
+		static ReturnState opNull(Thread&, const Code& code);
 #pragma endregion
 
-		float StackPop();
-		float StackPush(float);
-		float& StackTop();
+		Value StackPop(int count = 1);
+		Value StackPush(Value);
+		Value& StackTop();
 		unsigned int StackSize();
 		void ClearStack();
 
@@ -189,16 +198,17 @@ namespace Script {
 
 
 	namespace Loader {
-
-		class Generator {
-		public:
-			enum class AttrType {
+			enum AttrType {
 				Integer,
 				Float,
 				Comparer,
 				SpecialNumbers,
 				EntryPointSymbol,
+				Property,
 			};
+
+		class Generator {
+		public:
 			struct CodeSkelton {
 				Opcode opcode;
 				AttrType type;
@@ -215,9 +225,16 @@ namespace Script {
 			bool ParseAttrAsFloat(Code& c, const std::string& attr);
 			bool ParseAttrAsComparer(Code& c, const std::string& attr);
 			bool ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
+			bool ParseAttrAsProperty(Code& c, const std::string& attr);
 		};
 
 		std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen);
+		std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes,
+												  std::unordered_map<std::string, int>&& entrypoints);
+		std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes,
+												  const std::unordered_map<std::string, int>& entrypoints);
+		std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes);
+		std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes);
 	}
 }
 

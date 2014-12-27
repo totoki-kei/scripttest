@@ -127,7 +127,7 @@ namespace Script { namespace Loader {
 				lastLabel = 0;
 			}
 		}
-		codes.push_back(Code{ ToOpcode(&Thread::opEnd) });
+		codes.push_back(Code{ &Thread::opEnd });
 
 		if (epToSolve.size() > 0) {
 			int lastSize = epToSolve.size();
@@ -161,15 +161,47 @@ namespace Script { namespace Loader {
 		return std::shared_ptr<CodeProvider>(ret);
 	}
 
+	std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes,
+											  std::unordered_map<std::string, int>&& entrypoints) {
+		auto ret = new SimpleCodeProvider;
+		ret->codes = std::move(codes);
+		ret->entrypoints = std::move(entrypoints);
+
+		return std::shared_ptr<CodeProvider>(ret);
+	}
+
+	std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes,
+											  const std::unordered_map<std::string, int>& entrypoints) {
+		auto ret = new SimpleCodeProvider;
+		ret->codes = codes;
+		ret->entrypoints = entrypoints;
+
+		return std::shared_ptr<CodeProvider>(ret);
+	}
+
+	std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes) {
+		auto ret = new SimpleCodeProvider;
+		ret->codes = std::move(codes);
+
+		return std::shared_ptr<CodeProvider>(ret);
+	}
+
+	std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes) {
+		auto ret = new SimpleCodeProvider;
+		ret->codes = codes;
+
+		return std::shared_ptr<CodeProvider>(ret);
+	}
+
 	Generator::Generator() {
 #define OPMAPI(name, op) \
-	map[ #name ] = {ToOpcode(&Thread:: op ) , AttrType::Integer }
+	map[ #name ] = {&Thread:: op , AttrType::Integer }
 
 #define OPMAPF(name, op) \
-	map[ #name ] = {ToOpcode(&Thread:: op ) , AttrType::Float }
+	map[ #name ] = {&Thread:: op , AttrType::Float }
 
 #define OPMAP(name, op, attr) \
-	map[ #name ] = {ToOpcode(&Thread:: op ) , attr }
+	map[ #name ] = {&Thread:: op , attr }
 
 		OPMAPI(nop, opNull);
 
