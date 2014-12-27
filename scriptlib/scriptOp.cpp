@@ -3,7 +3,7 @@
 
 namespace Script {
 
-	float Thread::StackPop() {
+	Value Thread::StackPop() {
 		if (workstack.size() == 0) {
 			// 例外を投げる
 			throw std::domain_error{"Stack underflow."};
@@ -13,12 +13,12 @@ namespace Script {
 		return ret;
 	}
 
-	float Thread::StackPush(float val) {
+	Value Thread::StackPush(Value val) {
 		workstack.push_back(val);
 		return val;
 	}
 
-	float& Thread::StackTop() {
+	Value& Thread::StackTop() {
 		return workstack.back();
 	}
 
@@ -360,7 +360,7 @@ namespace Script {
 	ReturnState Thread::opAdd(const Code& code) {
 		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? StackPop() : code.val);
-		StackTop() += f;
+		StackTop().float_ += f;
 		return None;
 	};
 	//	連続加算
@@ -375,14 +375,14 @@ namespace Script {
 		float f = 0;
 		int count = code.option;
 		while (count--) {
-			f += StackPop();
+			f += StackPop().float_;
 			if (StackSize() < 0) {
 				errorCode = WorkstackUnderflow;
 				return Error;
 			}
 		}
 
-		StackTop() += f;
+		StackTop().float_ += f;
 
 		return None;
 	};
@@ -392,7 +392,7 @@ namespace Script {
 	ReturnState Thread::opMul(const Code& code) {
 		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? StackPop() : code.val);
-		StackTop() *= f;
+		StackTop().float_ *= f;
 		return None;
 	};
 	//	連続乗算
@@ -407,14 +407,14 @@ namespace Script {
 		float f = 1;
 		int count = code.option;
 		while (count--) {
-			f *= StackPop();
+			f *= StackPop().float_;
 			if (StackSize() < 0) {
 				errorCode = WorkstackUnderflow;
 				return Error;
 			}
 		}
 
-		StackTop() *= f;
+		StackTop().float_ *= f;
 
 		return None;
 	};
@@ -424,7 +424,7 @@ namespace Script {
 	ReturnState Thread::opSub(const Code& code) {
 		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option < 0? state->workarea[code.option] : StackPop());
-		StackTop() -= f;
+		StackTop().float_ -= f;
 		return None;
 	};
 	//	正負変換
@@ -442,7 +442,7 @@ namespace Script {
 	ReturnState Thread::opDiv(const Code& code) {
 		if (CheckStack(this, code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? StackPop() : code.val);
-		StackTop() /= f;
+		StackTop().float_ /= f;
 		return None;
 	};
 	//	剰余
@@ -573,7 +573,7 @@ namespace Script {
 	//	Opt : 未使用
 	ReturnState Thread::opVlod(const Code& code) {
 		if (CheckStack(this, 1, 1)) return Error;
-		auto index = (unsigned int)StackTop();
+		auto index = (unsigned int)StackTop().float_;
 		if (index < 0 || state->workarea.size() <= index) {
 			errorCode = InvalidOperand;
 			return Error;
@@ -588,7 +588,7 @@ namespace Script {
 	//	Opt : 未使用
 	ReturnState Thread::opVsto(const Code& code) {
 		if (CheckStack(this, 2, 0)) return Error;
-		auto index = (unsigned int)StackPop();
+		auto index = (unsigned int)StackPop().float_;
 		if (index < 0 || state->workarea.size() <= index) {
 			errorCode = InvalidOperand;
 			return Error;
@@ -705,7 +705,7 @@ namespace Script {
 			errorCode = WorkareaOutOfRange;
 			return Error;
 		}
-		state->workarea[dst] += state->workarea[src];
+		state->workarea[dst].float_ += state->workarea[src].float_;
 		return None;
 	}
 
@@ -720,7 +720,7 @@ namespace Script {
 			errorCode = WorkareaOutOfRange;
 			return Error;
 		}
-		state->workarea[dst] -= state->workarea[src];
+		state->workarea[dst].float_ -= state->workarea[src].float_;
 		return None;
 	}
 
@@ -735,7 +735,7 @@ namespace Script {
 			errorCode = WorkareaOutOfRange;
 			return Error;
 		}
-		state->workarea[dst] *= state->workarea[src];
+		state->workarea[dst].float_ *= state->workarea[src].float_;
 		return None;
 	}
 
@@ -750,7 +750,7 @@ namespace Script {
 			errorCode = WorkareaOutOfRange;
 			return Error;
 		}
-		state->workarea[dst] /= state->workarea[src];
+		state->workarea[dst].float_ /= state->workarea[src].float_;
 		return None;
 	}
 }

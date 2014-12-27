@@ -303,6 +303,13 @@ namespace Script { namespace Loader {
 		c.option = std::distance(list.begin(), it);
 		return c.option != list.size();
 	}
+	bool Generator::ParseAttrAsProperty(Code& c, const std::string& attr) {
+		if (attr.size() == 0) return false;
+		std::initializer_list<std::string> list = { "get", "set" };
+		auto it = std::find(list.begin(), list.end(), attr);
+		c.option = std::distance(list.begin(), it);
+		return c.option != list.size();
+	}
 
 }}
 

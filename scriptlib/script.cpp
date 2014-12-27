@@ -46,8 +46,10 @@ namespace Script {
 			
 			if (code.opcode) {
 				switch (ReturnState rs = code.opcode(*this, code)) {
-					case Error:
 					case Wait:
+						codeindex++;
+						/* fall-through */
+					case Error:
 					case Finished:
 						return rs;
 						break;

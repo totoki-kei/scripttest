@@ -30,7 +30,20 @@ int main(int argc, char* argv[])
 	auto st = prov->CreateState();
 	auto th = st->CreateThread();
 
-	th->Run();
+	while (auto stat = th->Run()) {
+		switch (stat) {
+			case S::Wait:
+				std::cout << "-------- Wait --------" << std::endl;
+				break;
+			case S::Error:
+				std::cout << "======== Error (code = " << th->errorCode << ") ========" << std::endl;
+				break;
+			case S::Finished:
+				std::cout << "-------- Finished --------" << std::endl;
+				break;
+		}
+		if (stat != S::Wait) break;
+	}
 
 	return 0;
 }

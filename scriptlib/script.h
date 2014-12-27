@@ -1,5 +1,5 @@
-#ifndef _SCRIPT_H_
-#define _SCRIPT_H_
+#ifndef SCRIPT_H_
+#define SCRIPT_H_
 
 #include <functional>
 #include <memory>
@@ -37,6 +37,21 @@ namespace Script {
 	struct Code;
 	struct State;
 	struct Thread;
+
+	union Value {
+		float float_;
+		int32_t int_;
+		void* ptr_;
+
+		inline Value() : int_{ -1 } {};
+		inline Value(float f) : float_{ f } {};
+		inline Value(int32_t i) : int_{ i } {};
+		inline Value(void* p) : ptr_{ p } {};
+
+		operator float&() { return float_; }
+		operator int32_t&() { return int_; }
+		operator void*&() { return ptr_; }
+	};
 
 	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
 	inline Opcode ToOpcode(ReturnState(Thread::*memfn)(const Code&)) {
@@ -81,6 +96,8 @@ namespace Script {
 
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
+		typedef std::shared_ptr<CodeProvider> Ptr;
+
 		virtual ~CodeProvider();
 
 		virtual const Code& Get(int index) = 0;
@@ -91,8 +108,10 @@ namespace Script {
 	};
 
 	struct State : public std::enable_shared_from_this<State> {
+		typedef std::shared_ptr<State> Ptr;
+
 		std::shared_ptr<CodeProvider> provider;
-		std::vector<float> workarea;
+		std::vector<Value> workarea;
 
 		State(std::shared_ptr<CodeProvider>);
 		~State();
@@ -104,9 +123,11 @@ namespace Script {
 	};
 
 	struct Thread {
+		typedef std::shared_ptr<Thread> Ptr;
+
 		std::shared_ptr<State> state;
 
-		std::vector<float> workstack;
+		std::vector<Value> workstack;
 		std::vector<int> callstack;
 		
 		int codeindex;
@@ -178,9 +199,9 @@ namespace Script {
 		ReturnState opNull(const Code& code);
 #pragma endregion
 
-		float StackPop();
-		float StackPush(float);
-		float& StackTop();
+		Value StackPop();
+		Value StackPush(Value);
+		Value& StackTop();
 		unsigned int StackSize();
 		void ClearStack();
 
@@ -189,16 +210,17 @@ namespace Script {
 
 
 	namespace Loader {
-
-		class Generator {
-		public:
-			enum class AttrType {
+			enum AttrType {
 				Integer,
 				Float,
 				Comparer,
 				SpecialNumbers,
 				EntryPointSymbol,
+				Property,
 			};
+
+		class Generator {
+		public:
 			struct CodeSkelton {
 				Opcode opcode;
 				AttrType type;
@@ -215,6 +237,7 @@ namespace Script {
 			bool ParseAttrAsFloat(Code& c, const std::string& attr);
 			bool ParseAttrAsComparer(Code& c, const std::string& attr);
 			bool ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
+			bool ParseAttrAsProperty(Code& c, const std::string& attr);
 		};
 
 		std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen);
