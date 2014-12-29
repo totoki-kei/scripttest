@@ -20,6 +20,7 @@ namespace Script {
 	}
 
 	Value& Thread::StackTop() {
+		
 		return workstack.back();
 	}
 
@@ -649,7 +650,7 @@ namespace Script {
 	};
 	//	スタックトップ削除
 	//	Stk : Opt / 0
-	//	Opt : 削除する要素数
+	//	Opt : 削除する要素数(0以下は1に補正)
 	ReturnState Thread::opDel(Thread& th, const Code& code) {
 		auto n = code.option < 0 ? 1 : code.option;
 		if (CheckStack(th, n, 0)) return Error;
@@ -751,4 +752,31 @@ namespace Script {
 		th.state->workarea[dst].float_ /= th.state->workarea[src].float_;
 		return None;
 	}
+
+	ReturnState Thread::opPushSb(Thread& th, const Code& code) {
+		int n = code.option;
+		if (n < 0) n = 0;
+		if (CheckStack(th, n, n)) return Error;
+
+		th.stackBase.push_back(th.workstack.size() - n);
+
+		return None;
+	}
+
+	ReturnState Thread::opPopSb(Thread& th, const Code& code) {
+		int n = code.option;
+		if (n < 0) n = 0;
+		if (CheckStack(th, n, n)) return Error;
+
+		int base = th.stackBase.back();
+		for (int i = 0; i < n; i++) {
+			th.workstack[base + i] = th.workstack[th.workstack.size() - n + i];
+		}
+		th.stackBase.pop_back();
+
+		return None;
+	}
+
+
+
 }

@@ -118,6 +118,7 @@ namespace Script {
 
 		std::vector<Value> workstack;
 		std::vector<int> callstack;
+		std::vector<int> stackBase;
 		
 		int codeindex;
 		int waitcount;
@@ -184,6 +185,9 @@ namespace Script {
 		static ReturnState opNsSub(Thread&, const Code& code);
 		static ReturnState opNsMul(Thread&, const Code& code);
 		static ReturnState opNsDiv(Thread&, const Code& code);
+
+		static ReturnState opPushSb(Thread&, const Code&);
+		static ReturnState opPopSb(Thread&, const Code&);
 
 		static ReturnState opNull(Thread&, const Code& code);
 #pragma endregion

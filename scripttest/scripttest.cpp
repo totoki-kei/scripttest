@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
 
 	std::cout << "-------- Start --------" << std::endl;
 	auto start = GetTickCount();
+	decltype(start) ticks;
 	while (auto stat = th->Run()) {
 		switch (stat) {
 			case S::Wait:
@@ -76,9 +77,13 @@ int main(int argc, char* argv[])
 				std::cout << "-------- Finished --------" << std::endl;
 				break;
 		}
-		if (GetTickCount() - start > 60 * 1000) break;
+		if ((ticks = GetTickCount() - start) > 60 * 1000) {
+			
+			break;
+		}
 		if (stat != S::Wait) break;
 	}
+	std::cout << "** time : " << ticks << " ms" << std::endl;
 	Script::Code dummy;
 	opPrint(*th, dummy);
 
