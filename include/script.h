@@ -54,7 +54,10 @@ namespace Script {
 	};
 
 	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
-	inline Opcode ToOpcode(ReturnState(*fn)(Thread&, const Code&)) {
+
+
+	template <typename Fn>
+	inline Opcode ToOpcode(Fn fn) {
 		return fn;
 	}
 
@@ -85,8 +88,6 @@ namespace Script {
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
 		typedef std::shared_ptr<CodeProvider> Ptr;
-
-		virtual ~CodeProvider();
 
 		virtual const Code& Get(int index) = 0;
 		virtual int Length() = 0;

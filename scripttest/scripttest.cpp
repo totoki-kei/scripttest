@@ -56,12 +56,13 @@ int main(int argc, char* argv[])
 	
 	gen.map["print"] = { opPrint, SL::AttrType::Integer };
 
-	//auto prov = SL::Load("script.txt", gen);
-	auto prov = SL::FromCodeSet(codes);
+	auto prov = SL::Load("script.txt", gen);
+	//auto prov = SL::FromCodeSet(codes);
 	
 	auto st = prov->CreateState();
 	auto th = st->CreateThread();
 
+	std::cout << "-------- Start --------" << std::endl;
 	auto start = GetTickCount();
 	while (auto stat = th->Run()) {
 		switch (stat) {

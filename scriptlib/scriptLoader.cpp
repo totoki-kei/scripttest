@@ -3,13 +3,11 @@
 #include <unordered_map>
 #include <fstream>
 
+//#define SCRIPT_LARGE_EXPR
+
 #include <boost/spirit/include/qi.hpp>
 #include <boost/phoenix.hpp>
 #include <boost/fusion/tuple.hpp>
-
-namespace Script {
-	CodeProvider::~CodeProvider() {}
-}
 
 namespace Script { namespace Loader {
 	
@@ -36,13 +34,6 @@ namespace Script { namespace Loader {
 		std::ifstream file(filepath);
 		if (file.bad()) return nullptr;
 
-		using boost::spirit::qi::int_;
-		using boost::spirit::qi::float_;
-		using boost::spirit::ascii::char_;
-		using boost::spirit::ascii::alpha;
-		using boost::spirit::ascii::alnum;
-		using boost::spirit::qi::lexeme;
-		using boost::spirit::qi::phrase_parse;
 
 
 		std::string wholeText((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -52,21 +43,32 @@ namespace Script { namespace Loader {
 		std::unordered_map<std::string, int> entrypoints;
 		std::unordered_multimap<std::string, int> epToSolve;
 
+		int lastLabel = 0;
+
+#ifdef SCRIPT_LARGE_EXPR
+		
+		using boost::spirit::qi::int_;
+		using boost::spirit::qi::float_;
+		using boost::spirit::ascii::char_;
+		using boost::spirit::ascii::alpha;
+		using boost::spirit::ascii::alnum;
+		using boost::spirit::qi::lexeme;
+		using boost::spirit::qi::phrase_parse;
+
 		auto r
 			= ('<' >> lexeme[+alpha] >> '>')
 			| float_
 			| ('*' >> int_)
 			| (lexeme[(alpha | char_("_#$%@")) >> +(alnum | char_("_#$%@"))] >> -('[' >> lexeme[*(char_ - ']')] >> ']'));
 
-		int lastLabel = 0;
-		for (auto begin = wholeText.begin(); begin != wholeText.end(); /* nop */ ) {
+		for (auto begin = wholeText.begin(); begin != wholeText.end(); /* nop */) {
 			boost::variant <
 				std::vector<char>,
 				float,
 				int,
 				boost::fusion::tuple <
-					boost::fusion::tuple<char, std::vector<char> >,
-					boost::optional<std::vector<char>>
+				boost::fusion::tuple<char, std::vector<char> >,
+				boost::optional < std::vector<char> >
 				>
 			> result;
 
@@ -101,7 +103,7 @@ namespace Script { namespace Loader {
 				auto &info = boost::get < boost::fusion::tuple <
 					boost::fusion::tuple<char, std::vector<char> >,
 					boost::optional<std::vector<char>>
-					>>(result);
+					>> (result);
 
 				auto sig_0 = boost::fusion::at_c<0>(info);
 				auto sig_head = boost::fusion::at_c<0>(sig_0);
@@ -127,6 +129,71 @@ namespace Script { namespace Loader {
 				lastLabel = 0;
 			}
 		}
+
+#else
+		
+		auto end = wholeText.end();
+		for (auto begin = wholeText.begin(); begin != end; /* nop */) {
+			
+			auto &skip = boost::spirit::ascii::space;
+
+			using boost::spirit::qi::phrase_parse;
+			namespace Q = boost::spirit::qi;
+
+			float num;
+			std::string strlabel;
+
+			if (phrase_parse(begin, end, Q::float_, skip, num)) {
+				// float
+				codes.emplace_back(&Thread::opPush, num);
+				codes.back().label = lastLabel;
+				lastLabel = 0;
+			}
+			else if (phrase_parse(begin, end, ('<' >> Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))] >> '>'), skip, strlabel)) {
+				// エントリポイント
+				std::string name(strlabel.begin(), strlabel.end());
+				entrypoints[name] = codes.size();
+			}
+			else if (phrase_parse(begin, end, ('*' >> Q::int_), skip, lastLabel)) {
+				// ラベル
+			}
+			else {
+				// 命令のはず
+				std::string sig, attr;
+
+				if (!phrase_parse(begin, end, Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))], skip, sig)) {
+					// 失敗した
+					//std::string failed_part;
+					//if (std::distance(begin, end) > 8) {
+					//	failed_part.assign(begin, begin + 8);
+					//	failed_part += "...";
+					//}
+					//else {
+					//	failed_part.assign(begin, end);
+					//}
+					
+					break;
+				}
+
+				phrase_parse(begin, end, '[' >> Q::lexeme[*(Q::char_ - ']')] >> ']', skip, attr);
+
+				std::string ep;
+				Code c = gen(sig, attr, ep);
+
+				if (ep.size()) {
+					epToSolve.insert({ ep, (int)codes.size() });
+				}
+
+				c.label = lastLabel;
+				codes.push_back(c);
+				lastLabel = 0;
+
+			}
+
+
+
+		}
+#endif
 		codes.push_back(Code{ &Thread::opEnd });
 
 		if (epToSolve.size() > 0) {
