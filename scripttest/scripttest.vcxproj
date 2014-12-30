@@ -97,7 +97,6 @@
     <ClInclude Include="gettoken.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
     <Text Include="script.txt" />
   </ItemGroup>
   <ItemGroup>
