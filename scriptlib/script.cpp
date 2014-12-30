@@ -32,7 +32,7 @@ namespace Script {
 		, waitcount{ 0 }
 		, errorCode{ OK } {}
 
-	ReturnState Thread::Run() {
+	ReturnState Thread::Run(bool nowait) {
 		if (errorCode)
 			return Error;
 
@@ -47,6 +47,7 @@ namespace Script {
 			if (code.opcode) {
 				switch (ReturnState rs = code.opcode(*this, code)) {
 					case Wait:
+						if (!nowait) break;;
 						codeindex++;
 						/* fall-through */
 					case Error:
@@ -60,5 +61,13 @@ namespace Script {
 
 		return Finished;
 	};
+
+	void Thread::Reset(int ep) {
+		this->callstack.clear();
+		this->workstack.clear();
+		this->errorCode = ErrorType::OK;
+		this->waitcount = 0;
+		this->codeindex = ep;
+	}
 
 }

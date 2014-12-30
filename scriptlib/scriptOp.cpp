@@ -324,13 +324,12 @@ namespace Script {
 	ReturnState Thread::opFwd(Thread& th, const Code& code) {
 		while (0 <= th.codeindex && th.codeindex < th.state->provider->Length()) {
 			const Code& c = th.state->provider->Get(th.codeindex);
-			if (c.label && (code.option == 0 || code.option == c.label)) {
+			if (!c.opcode && (code.option <= 0 || code.option == c.option)) {
 				break;
 			}
 			th.codeindex++;
 		}
-		// 実行後に一つ進むため、ここで1引いておく
-		th.codeindex--;
+		// 実行後に一つ進むが、指されたコードは何も実行しないコードなので、スキップされても支障はない。
 		return None;
 	};
 	//	巻き戻し
@@ -339,13 +338,12 @@ namespace Script {
 	ReturnState Thread::opRew(Thread& th, const Code& code) {
 		while (0 <= th.codeindex && th.codeindex < th.state->provider->Length()) {
 			const Code& c = th.state->provider->Get(th.codeindex);
-			if (c.label && (code.option <= 0 || code.option == c.label)) {
+			if (!c.opcode && (code.option <= 0 || code.option == c.option)) {
 				break;
 			}
 			th.codeindex--;
 		}
-		// 実行後に一つ進むため、ここで1引いておく
-		th.codeindex--;
+		// 実行後に一つ進むが、指されたコードは何も実行しないコードなので、スキップされても支障はない。
 		return None;
 	};
 #if 0
@@ -554,6 +552,28 @@ namespace Script {
 
 		return None;
 	};
+
+	//	度数法 -> 弧度法
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState Thread::opD2r(Thread& th, const Code& code) {
+		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(3.1415926535898f * f / 180);
+		return None;
+	};
+
+	//	弧度法 -> 度数法
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState Thread::opR2d(Thread& th, const Code& code) {
+		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(180 * f / 3.1415926535898f);
+		return None;
+	};
+
+
 	//	変数読み出し(定数アドレス)
 	//	Stk : 0 / 1
 	//	Opt : 変数番地
@@ -754,25 +774,25 @@ namespace Script {
 	}
 
 	ReturnState Thread::opPushSb(Thread& th, const Code& code) {
-		int n = code.option;
-		if (n < 0) n = 0;
-		if (CheckStack(th, n, n)) return Error;
+		//int n = code.option;
+		//if (n < 0) n = 0;
+		//if (CheckStack(th, n, n)) return Error;
 
-		th.stackBase.push_back(th.workstack.size() - n);
+		//th.stackBase.push_back(th.workstack.size() - n);
 
 		return None;
 	}
 
 	ReturnState Thread::opPopSb(Thread& th, const Code& code) {
-		int n = code.option;
-		if (n < 0) n = 0;
-		if (CheckStack(th, n, n)) return Error;
+		//int n = code.option;
+		//if (n < 0) n = 0;
+		//if (CheckStack(th, n, n)) return Error;
 
-		int base = th.stackBase.back();
-		for (int i = 0; i < n; i++) {
-			th.workstack[base + i] = th.workstack[th.workstack.size() - n + i];
-		}
-		th.stackBase.pop_back();
+		//int base = th.stackBase.back();
+		//for (int i = 0; i < n; i++) {
+		//	th.workstack[base + i] = th.workstack[th.workstack.size() - n + i];
+		//}
+		//th.stackBase.pop_back();
 
 		return None;
 	}

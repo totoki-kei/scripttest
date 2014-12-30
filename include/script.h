@@ -62,7 +62,6 @@ namespace Script {
 	}
 
 	struct Code {
-		int label;
 		Opcode opcode;
 
 		union {
@@ -70,15 +69,15 @@ namespace Script {
 			int32_t option;
 		};
 
-		Code() : label{ 0 }, opcode{ nullptr }, option{ -1 } { }
+		Code() : opcode{ nullptr }, option{ -1 } { }
 		Code(const Code&) = default;
 
 		template<typename Fn>
-		Code(Fn f) : label{ 0 }, opcode{ f }, option{ -1 } {}
+		Code(Fn f) : opcode{ f }, option{ -1 } {}
 		template<typename Fn>
-		Code(Fn f, float n) : label{ 0 }, opcode{ f }, val{ n } {}
+		Code(Fn f, float n) : opcode{ f }, val{ n } {}
 		template<typename Fn>
-		Code(Fn f, int32_t i) : label{ 0 }, opcode{ f }, option{ i } {}
+		Code(Fn f, int32_t i) : opcode{ f }, option{ i } {}
 
 	};
 
@@ -118,6 +117,7 @@ namespace Script {
 
 		std::vector<Value> workstack;
 		std::vector<int> callstack;
+		//std::vector<int> stackBase;
 		
 		int codeindex;
 		int waitcount;
@@ -125,7 +125,8 @@ namespace Script {
 
 		Thread(std::shared_ptr<State>, int);
 
-		ReturnState Run();
+		ReturnState Run(bool nowait = false);
+		void Reset(int ep = 0);
 
 #pragma region Operation Definitions
 		static ReturnState opEnd(Thread&, const Code& code);
@@ -166,6 +167,8 @@ namespace Script {
 		static ReturnState opLog(Thread&, const Code& code);
 		static ReturnState opLog10(Thread&, const Code& code);
 		static ReturnState opLen(Thread&, const Code& code);
+		static ReturnState opD2r(Thread&, const Code& code);
+		static ReturnState opR2d(Thread&, const Code& code);
 
 		static ReturnState opLod(Thread&, const Code& code);
 		static ReturnState opSto(Thread&, const Code& code);
@@ -184,6 +187,9 @@ namespace Script {
 		static ReturnState opNsSub(Thread&, const Code& code);
 		static ReturnState opNsMul(Thread&, const Code& code);
 		static ReturnState opNsDiv(Thread&, const Code& code);
+
+		static ReturnState opPushSb(Thread&, const Code&);
+		static ReturnState opPopSb(Thread&, const Code&);
 
 		static ReturnState opNull(Thread&, const Code& code);
 #pragma endregion

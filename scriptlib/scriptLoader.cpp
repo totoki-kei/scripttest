@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <fstream>
 
-//#define SCRIPT_LARGE_EXPR
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/phoenix.hpp>
@@ -43,94 +42,7 @@ namespace Script { namespace Loader {
 		std::unordered_map<std::string, int> entrypoints;
 		std::unordered_multimap<std::string, int> epToSolve;
 
-		int lastLabel = 0;
 
-#ifdef SCRIPT_LARGE_EXPR
-		
-		using boost::spirit::qi::int_;
-		using boost::spirit::qi::float_;
-		using boost::spirit::ascii::char_;
-		using boost::spirit::ascii::alpha;
-		using boost::spirit::ascii::alnum;
-		using boost::spirit::qi::lexeme;
-		using boost::spirit::qi::phrase_parse;
-
-		auto r
-			= ('<' >> lexeme[+alpha] >> '>')
-			| float_
-			| ('*' >> int_)
-			| (lexeme[(alpha | char_("_#$%@")) >> +(alnum | char_("_#$%@"))] >> -('[' >> lexeme[*(char_ - ']')] >> ']'));
-
-		for (auto begin = wholeText.begin(); begin != wholeText.end(); /* nop */) {
-			boost::variant <
-				std::vector<char>,
-				float,
-				int,
-				boost::fusion::tuple <
-				boost::fusion::tuple<char, std::vector<char> >,
-				boost::optional < std::vector<char> >
-				>
-			> result;
-
-
-			bool succeeded = phrase_parse(begin, wholeText.end(),
-										  r,
-										  boost::spirit::ascii::space, result);
-
-
-			if (!succeeded) {
-				break;
-			}
-
-			if (result.which() == 0) {
-				// エントリポイント
-				auto& v = boost::get<std::vector<char>>(result);
-				std::string name(v.begin(), v.end());
-				entrypoints[name] = codes.size();
-			}
-			if (result.which() == 1) {
-				// float
-				codes.emplace_back(&Thread::opPush, boost::get<float>(result));
-				codes.back().label = lastLabel;
-				lastLabel = 0;
-			}
-			else if (result.which() == 2) {
-				// ラベル
-				lastLabel = boost::get<int>(result);
-			}
-			else if (result.which() == 3) {
-				// 命令
-				auto &info = boost::get < boost::fusion::tuple <
-					boost::fusion::tuple<char, std::vector<char> >,
-					boost::optional<std::vector<char>>
-					>> (result);
-
-				auto sig_0 = boost::fusion::at_c<0>(info);
-				auto sig_head = boost::fusion::at_c<0>(sig_0);
-				auto sig_trail = boost::fusion::at_c<1>(sig_0);
-				auto attr_ = boost::fusion::at_c<1>(info);
-
-				std::string sig;
-				sig += sig_head;
-				sig.insert(sig.end(), sig_trail.begin(), sig_trail.end());
-
-				std::string attr;
-				if (attr_) attr.assign(attr_->begin(), attr_->end());
-
-				std::string ep;
-				Code c = gen(sig, attr, ep);
-
-				if (ep.size()) {
-					epToSolve.insert({ ep, (int)codes.size() });
-				}
-
-				c.label = lastLabel;
-				codes.push_back(c);
-				lastLabel = 0;
-			}
-		}
-
-#else
 		
 		auto end = wholeText.end();
 		for (auto begin = wholeText.begin(); begin != end; /* nop */) {
@@ -142,20 +54,19 @@ namespace Script { namespace Loader {
 
 			float num;
 			std::string strlabel;
+			int intlabel;
 
 			if (phrase_parse(begin, end, Q::float_, skip, num)) {
 				// float
 				codes.emplace_back(&Thread::opPush, num);
-				codes.back().label = lastLabel;
-				lastLabel = 0;
 			}
 			else if (phrase_parse(begin, end, ('<' >> Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))] >> '>'), skip, strlabel)) {
 				// エントリポイント
-				std::string name(strlabel.begin(), strlabel.end());
-				entrypoints[name] = codes.size();
+				entrypoints[strlabel] = codes.size();
 			}
-			else if (phrase_parse(begin, end, ('*' >> Q::int_), skip, lastLabel)) {
+			else if (phrase_parse(begin, end, ('*' >> Q::int_), skip, intlabel)) {
 				// ラベル
+				codes.emplace_back(nullptr, intlabel);
 			}
 			else {
 				// 命令のはず
@@ -163,37 +74,40 @@ namespace Script { namespace Loader {
 
 				if (!phrase_parse(begin, end, Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))], skip, sig)) {
 					// 失敗した
-					//std::string failed_part;
-					//if (std::distance(begin, end) > 8) {
-					//	failed_part.assign(begin, begin + 8);
-					//	failed_part += "...";
-					//}
-					//else {
-					//	failed_part.assign(begin, end);
-					//}
-					
-					break;
+					std::string failed_part;
+					int dist = std::distance(wholeText.begin(), begin);
+					if (std::distance(begin, end) > 12) {
+						failed_part.assign(begin, begin + 8);
+						failed_part += "...";
+					}
+					else {
+						failed_part.assign(begin, end);
+					}
+					throw std::domain_error("cannot parse at [" + failed_part + "] (byte " + std::to_string(dist) + ")");
 				}
 
 				phrase_parse(begin, end, '[' >> Q::lexeme[*(Q::char_ - ']')] >> ']', skip, attr);
 
 				std::string ep;
-				Code c = gen(sig, attr, ep);
+				try {
+					Code c = gen(sig, attr, ep);
+					if (ep.size()) {
+						epToSolve.insert({ ep, (int)codes.size() });
+					}
 
-				if (ep.size()) {
-					epToSolve.insert({ ep, (int)codes.size() });
+					codes.push_back(c);
+
 				}
-
-				c.label = lastLabel;
-				codes.push_back(c);
-				lastLabel = 0;
+				catch (...) {
+					throw std::domain_error("failed to generate code (signature = " + sig + ", attribute = " + attr + ")");
+				}
 
 			}
 
 
 
 		}
-#endif
+
 		codes.push_back(Code{ &Thread::opEnd });
 
 		if (epToSolve.size() > 0) {
@@ -312,6 +226,8 @@ namespace Script { namespace Loader {
 		OPMAPF(log, opLog);
 		OPMAPF(ln, opLog10);
 		OPMAPI(len, opLen);
+		OPMAPF(deg2rad, opD2r);
+		OPMAPF(rad2deg, opR2d);
 
 		OPMAPI(get, opLod);
 		OPMAPI(set, opSto);
@@ -341,7 +257,6 @@ namespace Script { namespace Loader {
 	Code Generator::operator ()(const std::string& sig, const std::string& attr, std::string& outBindSymbol) {
 		auto &sk = map.at(sig);
 		Code c;
-		c.label = 0;
 		c.opcode = sk.opcode;
 		switch (sk.type) {
 			case AttrType::Integer:
