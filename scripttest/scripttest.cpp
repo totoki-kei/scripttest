@@ -3,6 +3,7 @@
 
 
 #include "script.h"
+#include "scriptOp.h"
 
 namespace S = Script;
 namespace SL = Script::Loader;
@@ -19,29 +20,29 @@ S::ReturnState opPrint(S::Thread& th, const S::Code& c) {
 	return S::ReturnState::None;
 }
 
-#define A Script::Code{ &Script::Thread::opAdd, 1.0f }
+#define A Script::Code{ &Script::opAdd, 1.0f }
 #define A10 A, A, A, A, A, A, A, A, A, A
 #define A100 A10, A10, A10, A10, A10, A10, A10, A10, A10, A10
 
 
 std::vector<Script::Code> codes{
-	Script::Code{ &Script::Thread::opPush, 0 },
-	Script::Code{ &Script::Thread::opPush, 1 },
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
-	Script::Code{ &Script::Thread::opDel, 1 },
-	Script::Code{ &Script::Thread::opAdd, 1.0f },
-	Script::Code{ &Script::Thread::opWait, 1 },
-	Script::Code{ &Script::Thread::opGoto, 1 },
-	Script::Code{ &Script::Thread::opEnd },
+	//Script::Code{ &Script::opPush, 0 },
+	//Script::Code{ &Script::opPush, 1 },
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//A100, A100, A100, A100, A100, A100, A100, A100, A100, A100,
+	//Script::Code{ &Script::opDel, 1 },
+	//Script::Code{ &Script::opAdd, 1.0f },
+	//Script::Code{ &Script::opWait, 1 },
+	//Script::Code{ &Script::opGoto, 1 },
+	Script::Code{ &Script::opEnd },
 };
 
 #undef A100
@@ -50,8 +51,18 @@ std::vector<Script::Code> codes{
 
 #include <Windows.h>
 
+template <typename T>
+void printT() {
+	std::cout << typeid(T).name() << "(size = " << sizeof(T) << ")" << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
+	printT<S::Code>();
+	printT<S::State>();
+	printT<S::Thread>();
+	printT<std::vector<S::Code>>();
+
 	SL::Generator gen;
 	
 	gen.map["print"] = { opPrint, SL::AttrType::Integer };

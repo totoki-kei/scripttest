@@ -1,4 +1,5 @@
 #include "script.h"
+#include "scriptOp.h"
 
 #include <unordered_map>
 #include <fstream>
@@ -24,7 +25,7 @@ namespace Script { namespace Loader {
 			return codes.size();
 		}
 
-		int EntryPoint(const char* ent) override {
+		int Label(const char* ent) override {
 			return entrypoints[ent];
 		}
 	};
@@ -58,7 +59,7 @@ namespace Script { namespace Loader {
 
 			if (phrase_parse(begin, end, Q::float_, skip, num)) {
 				// float
-				codes.emplace_back(&Thread::opPush, num);
+				codes.emplace_back(opPush, num);
 			}
 			else if (phrase_parse(begin, end, ('<' >> Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))] >> '>'), skip, strlabel)) {
 				// エントリポイント
@@ -108,7 +109,7 @@ namespace Script { namespace Loader {
 
 		}
 
-		codes.push_back(Code{ &Thread::opEnd });
+		codes.push_back(Code{ opEnd });
 
 		if (epToSolve.size() > 0) {
 			int lastSize = epToSolve.size();
@@ -176,13 +177,13 @@ namespace Script { namespace Loader {
 
 	Generator::Generator() {
 #define OPMAPI(name, op) \
-	map[ #name ] = {&Thread:: op , AttrType::Integer }
+	map[ #name ] = { op , AttrType::Integer }
 
 #define OPMAPF(name, op) \
-	map[ #name ] = {&Thread:: op , AttrType::Float }
+	map[ #name ] = { op , AttrType::Float }
 
 #define OPMAP(name, op, attr) \
-	map[ #name ] = {&Thread:: op , attr }
+	map[ #name ] = { op , attr }
 
 		OPMAPI(nop, opNull);
 
@@ -241,6 +242,9 @@ namespace Script { namespace Loader {
 
 		OPMAP(call, opCall, AttrType::EntryPointSymbol);
 		OPMAPI(ret, opRet);
+
+		OPMAPI(enter, opPushSb);
+		OPMAPI(leave, opPopSb);
 
 		OPMAP(push, opPush, AttrType::Float);
 

@@ -104,7 +104,7 @@ namespace Script {
 		/// <summery>コード群のサイズを得る。</summery>
 		virtual int Length() = 0;
 		/// <summery>指定された名称に関連付けられたコードインデックスを得る。存在しない場合は-1を返す。</summery>
-		virtual int EntryPoint(const char* name) = 0;
+		virtual int Label(const char* name) = 0;
 
 		/// <summery>Stateを作成する</summery>
 		virtual std::shared_ptr<State> CreateState();
@@ -116,9 +116,9 @@ namespace Script {
 
 		std::shared_ptr<CodeProvider> provider;
 		std::vector<Value> workarea;
+		void* registry;
 
 		State(std::shared_ptr<CodeProvider>);
-		~State();
 
 		/// <summery>指定のコードインデックスから開始するスレッドを作成する。未指定の場合はインデックス0番から開始する。</summery>
 		std::shared_ptr<Thread> CreateThread(int entryPoint = 0);
@@ -136,7 +136,7 @@ namespace Script {
 
 		std::vector<Value> workstack;
 		std::vector<int> callstack;
-		//std::vector<int> stackBase;
+		size_t stackBase;
 		
 		int codeindex;
 		int waitcount;
@@ -149,77 +149,14 @@ namespace Script {
 		/// <summery>スレッドのスタック等を完全に削除し、指定されたコードインデックスから実行するように設定する。未指定の場合はインデックス0番から開始する。</summery>
 		void Reset(int ep = 0);
 
-#pragma region Operation Definitions
-		static ReturnState opEnd(Thread&, const Code& code);
-		static ReturnState opWait(Thread&, const Code& code);
-
-		static ReturnState opGoto(Thread&, const Code& code);
-		static ReturnState opJmp(Thread&, const Code& code);
-		//static ReturnState opCpt(Thread&, const Code& code);
-		static ReturnState opFwd(Thread&, const Code& code);
-		static ReturnState opRew(Thread&, const Code& code);
-		static ReturnState opJz(Thread&, const Code& code);
-		static ReturnState opJnz(Thread&, const Code& code);
-		static ReturnState opJpos(Thread&, const Code& code);
-		static ReturnState opJneg(Thread&, const Code& code);
-		static ReturnState opJeq(Thread&, const Code& code);
-		static ReturnState opJne(Thread&, const Code& code);
-		static ReturnState opJgt(Thread&, const Code& code);
-		static ReturnState opJge(Thread&, const Code& code);
-		static ReturnState opJlt(Thread&, const Code& code);
-		static ReturnState opJle(Thread&, const Code& code);
-		static ReturnState opCmp(Thread&, const Code& code);
-		static ReturnState opIs(Thread&, const Code& code);
-
-		static ReturnState opAdd(Thread&, const Code& code);
-		static ReturnState opAdds(Thread&, const Code& code);
-		static ReturnState opMul(Thread&, const Code& code);
-		static ReturnState opMuls(Thread&, const Code& code);
-		static ReturnState opSub(Thread&, const Code& code);
-		static ReturnState opNeg(Thread&, const Code& code);
-		static ReturnState opDiv(Thread&, const Code& code);
-		static ReturnState opMod(Thread&, const Code& code);
-		static ReturnState opSin(Thread&, const Code& code);
-		static ReturnState opCos(Thread&, const Code& code);
-		static ReturnState opTan(Thread&, const Code& code);
-		static ReturnState opArg(Thread&, const Code& code);
-		static ReturnState opSqrt(Thread&, const Code& code);
-		static ReturnState opPow(Thread&, const Code& code);
-		static ReturnState opLog(Thread&, const Code& code);
-		static ReturnState opLog10(Thread&, const Code& code);
-		static ReturnState opLen(Thread&, const Code& code);
-		static ReturnState opD2r(Thread&, const Code& code);
-		static ReturnState opR2d(Thread&, const Code& code);
-
-		static ReturnState opLod(Thread&, const Code& code);
-		static ReturnState opSto(Thread&, const Code& code);
-		static ReturnState opVlod(Thread&, const Code& code);
-		static ReturnState opVsto(Thread&, const Code& code);
-		static ReturnState opDup(Thread&, const Code& code);
-		static ReturnState opSpps(Thread&, const Code& code);
-		static ReturnState opDel(Thread&, const Code& code);
-		static ReturnState opCls(Thread&, const Code& code);
-		static ReturnState opCall(Thread&, const Code& code);
-		static ReturnState opRet(Thread&, const Code& code);
-
-		static ReturnState opPush(Thread&, const Code& code);
-
-		static ReturnState opNsAdd(Thread&, const Code& code);
-		static ReturnState opNsSub(Thread&, const Code& code);
-		static ReturnState opNsMul(Thread&, const Code& code);
-		static ReturnState opNsDiv(Thread&, const Code& code);
-
-		static ReturnState opPushSb(Thread&, const Code&);
-		static ReturnState opPopSb(Thread&, const Code&);
-
-		static ReturnState opNull(Thread&, const Code& code);
-#pragma endregion
-
 		Value StackPop(int count = 1);
 		Value StackPush(Value);
 		Value& StackTop();
 		unsigned int StackSize();
 		void ClearStack();
+
+		bool FramePush(int pass);
+		bool FramePop(int pass);
 
 	};
 

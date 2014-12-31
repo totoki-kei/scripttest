@@ -2,45 +2,71 @@
 #include "CppUnitTest.h"
 
 #include <script.h>
+#include <scriptOp.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace scriptUnitTest
-{		
+{	
+	using namespace Script;
+
 	TEST_CLASS(OpcodeTest)
 	{
 	public:
 
-		static ScriptCode N(float value){
-			ScriptCode c;
-			c.val = value;
-			return c;
+		static Code N(float value){
+			return Code{ opPush, value };
 		}
 
-		static ScriptCode P(ScriptOpcode opcode, short opt = 0){
-			ScriptCode c;
-			c.flag = 0;
-			c.exp = 0xFF;
-			c.opid = (unsigned short)opcode;
-			c.option = opt;
-			return c;
+		static Code P(Opcode opcode, int opt = -1) {
+			return Code{ opcode, opt };
+		}
+
+		static Code P(Opcode opcode, float value) {
+			return Code{ opcode, value };
 		}
 
 		TEST_METHOD(OpEnd)
 		{
-			ScriptCode code[] = {
-				N(10), N(20), P(OpcodeEnd), N(30),
+			Code code[] = {
+				N(10), N(20), P(opEnd), N(30),
 			};
-			ScriptState state(8, 8, 8, 8, code);
-			auto ret = state.Run();
+			auto cp = Loader::FromCodeSet(std::vector<Code>(std::begin(code), std::end(code)));
+			auto state = cp->CreateState();
+			auto thread = state->CreateThread();
+			auto ret = thread->Run();
 
-			Assert::AreEqual(0, state.callstacktop);
-			Assert::AreEqual(2, state.workstacktop);
-			Assert::AreEqual((int)ScriptReturnState::Finished, (int)ret);
-			Assert::AreEqual((int)ScriptError::ScriptHasFinished, (int)state.errorCode);
-			Assert::AreEqual(2, state.codeindex);
-
+			Assert::AreEqual((size_t)0, thread->callstack.size());
+			Assert::AreEqual((size_t)2, thread->workstack.size());
+			Assert::AreEqual((int)ReturnState::Finished, (int)ret);
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->errorCode);
+			Assert::AreEqual(2, thread->codeindex);
 		}
 
+		TEST_METHOD(OpStackFrame) {
+			Code code[] = {
+				N(10), N(20),
+				P(opPushSb, 1),
+
+				P(opMul, 2.0f),
+				P(opDup, 8),
+				P(opPopSb, 3),
+				P(opAdds, 3),
+
+				P(opEnd),
+			};
+			auto cp = Loader::FromCodeSet(std::vector<Code>(std::begin(code), std::end(code)));
+			auto state = cp->CreateState();
+			auto thread = state->CreateThread();
+
+			auto ret = thread->Run();
+
+			Assert::AreEqual((size_t)0, thread->callstack.size(), L"final : callstack");
+			Assert::AreEqual((size_t)1, thread->workstack.size(), L"final : workstack");
+			Assert::AreEqual((int)ReturnState::Finished, (int)ret, L"final : returnstate");
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->errorCode, L"final : errortype");
+			Assert::AreEqual(130.0f, thread->workstack[0].float_, L"final : stack[0]");
+
+		}
 	};
 }
