@@ -58,14 +58,14 @@ namespace Script {
 	}
 
 	bool Thread::FramePop(int n) {
-		if (stackBase == 0) return true;
-		if (CheckStack(*this, n, 0)) {
+		if (stackBase == 0) {
 			this->errorCode = WorkstackUnderflow;
 			return true;
 		}
+		if (CheckStack(*this, n, 0)) return true;
 
 		auto iter = workstack.begin() + stackBase - 1;
-		size_t restorebase = (int)iter->int_;
+		size_t restorebase = (size_t)iter->int_;
 		workstack.erase(iter, workstack.end() - n);
 		stackBase = restorebase;
 		return false;
