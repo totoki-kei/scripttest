@@ -12,8 +12,8 @@ namespace SL = Script::Loader;
 
 S::ReturnState opPrint(S::Thread& th, const S::Code& c) {
 	std::cout << "stack trace start" << std::endl;
-	for (auto i = (size_t)0; i < th.workstack.size(); i++) {
-		std::cout << "\t#" << i << " : " << th.workstack[i].float_ << std::endl;
+	for (auto i = (size_t)0; i < th.WorkStackSize(); i++) {
+		std::cout << "\t#" << i << " : " << th.WorkStackAt(i).float_ << std::endl;
 	}
 	std::cout << "stack trace end" << std::endl;
 
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 				//std::cout << "-------- Wait --------" << std::endl;
 				break;
 			case S::Error:
-				std::cout << "======== Error (code = " << th->errorCode << ") ========" << std::endl;
+				std::cout << "======== Error (code = " << th->GetErrorCode() << ") ========" << std::endl;
 				break;
 			case S::Finished:
 				std::cout << "-------- Finished --------" << std::endl;

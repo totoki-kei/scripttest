@@ -36,22 +36,23 @@ namespace scriptUnitTest
 			auto thread = state->CreateThread();
 			auto ret = thread->Run();
 
-			Assert::AreEqual((size_t)0, thread->callstack.size());
-			Assert::AreEqual((size_t)2, thread->workstack.size());
+			Assert::AreEqual((size_t)0, thread->CallStackSize());
+			Assert::AreEqual((size_t)2, thread->WorkStackSize());
 			Assert::AreEqual((int)ReturnState::Finished, (int)ret);
-			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->errorCode);
-			Assert::AreEqual(2, thread->codeindex);
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode());
+			Assert::AreEqual(2, thread->GetCodeIndex());
 		}
 
 		TEST_METHOD(OpStackFrame) {
 			Code code[] = {
-				N(10), N(20),
-				P(opPushSb, 1),
-
-				P(opMul, 2.0f),
-				P(opDup, 8),
-				P(opPopSb, 3),
-				P(opAdds, 3),
+				N(10), N(20),   // 10.0     20.0 <
+				P(opPushSb, 1), // 10.0 [0] 20.0 <
+				P(opMul, 2.0f), // 10.0 [0] 40.0 <
+				P(opDup, 8),    // 10.0 [0] 40.0 40.0 40.0 40.0 40.0 40.0 40.0 40.0 <
+				P(opAdd, 5.0f), // 10.0 [0] 40.0 40.0 40.0 40.0 40.0 40.0 40.0 45.0 <
+				N(100),         // 10.0 [0] 40.0 40.0 40.0 40.0 40.0 40.0 40.0 45.0 100.0 < 
+				P(opPopSb, 3),  // 10.0                                   40.0 45.0 100.0 <
+				P(opAdds, 3),   // 195.0 <
 
 				P(opEnd),
 			};
@@ -61,11 +62,11 @@ namespace scriptUnitTest
 
 			auto ret = thread->Run();
 
-			Assert::AreEqual((size_t)0, thread->callstack.size(), L"final : callstack");
-			Assert::AreEqual((size_t)1, thread->workstack.size(), L"final : workstack");
+			Assert::AreEqual((size_t)0, thread->CallStackSize(), L"final : callstack");
+			Assert::AreEqual((size_t)1, thread->WorkStackSize(), L"final : workstack");
 			Assert::AreEqual((int)ReturnState::Finished, (int)ret, L"final : returnstate");
-			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->errorCode, L"final : errortype");
-			Assert::AreEqual(130.0f, thread->workstack[0].float_, L"final : stack[0]");
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode(), L"final : errortype");
+			Assert::AreEqual(195.0f, thread->WorkStackAt(0).float_, L"final : stack[0]");
 
 		}
 	};

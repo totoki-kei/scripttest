@@ -12,6 +12,7 @@ clear
 get[1] add[1.0] set[1]
 get[1] 3 jump_lt[1] end rew[1]
 
+
 <ppp>
 print
 ret
@@ -30,3 +31,5 @@ add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0]
 add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0] add[1.0]
 
 print
+end
+

@@ -5,93 +5,25 @@
 
 namespace Script {
 
-	Value Thread::StackPop(int n) {
-		if (workstack.size() <= stackBase ) {
-			// 例外を投げる
-			throw std::domain_error{"Stack underflow."};
-		}
-		float ret = workstack.back();
-		auto begin = workstack.end() - n;
-		workstack.erase(begin, workstack.end());
-		return ret;
-	}
-
-	Value Thread::StackPush(Value val) {
-		workstack.push_back(val);
-		return val;
-	}
-
-	Value& Thread::StackTop() {
-		if (workstack.size() <= stackBase) {
-			// 例外を投げる
-			throw std::domain_error{ "Stack underflow." };
-		}
-		return workstack.back();
-	}
-
-	unsigned int Thread::StackSize() {
-		return workstack.size() - stackBase;
-	}
-
-	void Thread::ClearStack() {
-		workstack.erase(workstack.begin() + stackBase, workstack.end());
-	}
-
-	inline ReturnState CheckStack(Thread &th, unsigned int pop, unsigned int /* push ( unused ) */) {
-		if (th.StackSize() < pop) {
-			th.errorCode = WorkstackUnderflow;
-			return Error;
-		}
-		//int requiredSize = (int)state->workstack.size() - (int)pop + (int)push;
-		//while (requiredSize >= state->workstack.size()) {
-		//	state->workstack.resize(state->workstack.size() * 2 + 1);
-		//}
-		return ReturnState::None;
-	}
-
-	bool Thread::FramePush(int n) {
-		if (CheckStack(*this, n, 0)) return true;
-		size_t newbase = workstack.size() - n + 1;
-		workstack.insert(workstack.begin() + newbase - 1, (int)stackBase);
-		stackBase = newbase;
-		return false;
-	}
-
-	bool Thread::FramePop(int n) {
-		if (stackBase == 0) {
-			this->errorCode = WorkstackUnderflow;
-			return true;
-		}
-		if (CheckStack(*this, n, 0)) return true;
-
-		auto iter = workstack.begin() + stackBase - 1;
-		size_t restorebase = (size_t)iter->int_;
-		workstack.erase(iter, workstack.end() - n);
-		stackBase = restorebase;
-		return false;
-	}
-
-
-
 	//	未定義の命令語
 	//	Stk : 0 / 0
 	//	Opt : 未使用
 	ReturnState opNull(Thread& th, const Code& code) {
-		th.errorCode = InvalidOpcode;
+		th.SetErrorCode(InvalidOpcode);
 		return Error;
 	};
 	//	中断
 	//	Stk : # / #
 	//	Opt : 待機カウント(0以上、0の場合は中断のみ行う)
 	ReturnState opWait(Thread& th, const Code& code) {
-		th.waitcount = code.option > 0 ? code.option : 0;
+		th.WaitThread(code.option > 0 ? code.option : 0);
 		return Wait;
 	};
 	//	終了
 	//	Stk : # / #
 	//	Opt : 未使用
 	ReturnState opEnd(Thread& th, const Code& code) {
-		th.errorCode = ScriptHasFinished;
+		th.SetErrorCode(ScriptHasFinished);
 		return Finished;
 	};
 
@@ -99,9 +31,9 @@ namespace Script {
 	//	Stk : 1 / 0 or 0 / 0
 	//	Opt : -1、またはジャンプ位置
 	ReturnState opGoto(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 0)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 0)) return Error;
 		int addr = code.option < 0 ? (int)th.StackPop().float_ : code.option;
-		th.codeindex = addr - 1;
+		th.SetCodeIndex(addr - 1);
 
 		return None;
 	}
@@ -111,7 +43,7 @@ namespace Script {
 	//	Opt : ジャンプオフセット
 	ReturnState opJmp(Thread& th, const Code& code) {
 		if (code.option >= 0)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -119,15 +51,15 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJeq(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
 		float left = th.StackPop();
 		if (left == right)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -135,15 +67,15 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJne(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
 		float left = th.StackPop();
 		if (left != right)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -151,15 +83,15 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJgt(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
 		float left = th.StackPop();
 		if (left > right)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -167,15 +99,15 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJge(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
 		float left = th.StackPop();
 		if (left >= right)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -183,15 +115,15 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJlt(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
 		float left = th.StackPop();
 		if (left < right)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -199,15 +131,15 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJle(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
 		float left = th.StackPop();
 		if (left <= right)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -215,14 +147,14 @@ namespace Script {
 	//	Stk : 1 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJz(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 0)) return Error;
+		if (th.CheckStack(1, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
 		if (num == 0.0)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -230,14 +162,14 @@ namespace Script {
 	//	Stk : 1 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJnz(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 0)) return Error;
+		if (th.CheckStack(1, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
 		if (num != 0.0)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -245,14 +177,14 @@ namespace Script {
 	//	Stk : 1 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJpos(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 0)) return Error;
+		if (th.CheckStack(1, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
 		if (num > 0.0)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 
 		return None;
 	};
@@ -260,14 +192,14 @@ namespace Script {
 	//	Stk : 1 / 0
 	//	Opt : ジャンプオフセット
 	ReturnState opJneg(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 0)) return Error;
+		if (th.CheckStack(1, 0)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
 		if (num < 0.0)
-			th.codeindex += code.option;
+			th.AddCodeIndex(code.option);
 		
 		return None;
 	};
@@ -281,9 +213,9 @@ namespace Script {
 	//			8 : Or(少なくともどちらかが0以外)
 	//			A : Xor(どちらか一方のみが0以外)
 	ReturnState opCmp(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 1)) return Error;
+		if (th.CheckStack(2, 1)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -308,7 +240,7 @@ namespace Script {
 				th.StackPush((float)((code.option & 1) ^ (left > 0) ^ (right > 0)));
 				return None;
 		}
-		th.errorCode = InvalidOperand;
+		th.SetErrorCode(InvalidOperand);
 		return Error;
 	};
 	//	数値属性取得
@@ -321,9 +253,9 @@ namespace Script {
 	//			8 : 負の無限大
 	//			A : NaN
 	ReturnState opIs(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 1)) return Error;
+		if (th.CheckStack(1, 1)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOpcode;
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
@@ -347,35 +279,41 @@ namespace Script {
 				th.StackPush((float)((code.option & 1) ^ (num != num)));
 				return None;
 		}
-		th.errorCode = InvalidOperand;
+		th.SetErrorCode(InvalidOperand);
 		return Error;
 	};
 	//	早送り
 	//	Stk : 0 / 0
 	//	Opt : 識別ID -1で一番近いフラグ
 	ReturnState opFwd(Thread& th, const Code& code) {
-		while (0 <= th.codeindex && th.codeindex < th.state->provider->Length()) {
-			const Code& c = th.state->provider->Get(th.codeindex);
+		int codeindex = th.GetCodeIndex();
+		auto provider = th.GetCodeProvider();
+		while (0 <= codeindex && codeindex < provider->Length()) {
+			const Code& c = provider->Get(codeindex);
 			if (!c.opcode && (code.option < 0 || code.option == c.option)) {
 				break;
 			}
-			th.codeindex++;
+			codeindex++;
 		}
 		// 実行後に一つ進むが、指されたコードは何も実行しないコードなので、スキップされても支障はない。
+		th.SetCodeIndex(codeindex);
 		return None;
 	};
 	//	巻き戻し
 	//	Stk : 0 / 0
 	//	Opt : 識別ID -1で一番近いフラグ
 	ReturnState opRew(Thread& th, const Code& code) {
-		while (0 <= th.codeindex && th.codeindex < th.state->provider->Length()) {
-			const Code& c = th.state->provider->Get(th.codeindex);
+		int codeindex = th.GetCodeIndex();
+		auto provider = th.GetCodeProvider();
+		while (0 <= codeindex && codeindex < provider->Length()) {
+			const Code& c = provider->Get(codeindex);
 			if (!c.opcode && (code.option < 0 || code.option == c.option)) {
 				break;
 			}
-			th.codeindex--;
+			codeindex--;
 		}
 		// 実行後に一つ進むが、指されたコードは何も実行しないコードなので、スキップされても支障はない。
+		th.SetCodeIndex(codeindex);
 		return None;
 	};
 #if 0
@@ -390,7 +328,7 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opAdd(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackTop().float_ += f;
 		return None;
@@ -399,9 +337,9 @@ namespace Script {
 	//	Stk : Opt+1 / 1
 	//	Opt : 加算回数(1で普通の加算) ※ 要素数ではない
 	ReturnState opAdds(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option + 1, 1)) return Error;
+		if (th.CheckStack(code.option + 1, 1)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOperand;
+			th.SetErrorCode(InvalidOperand);
 			return Error;
 		}
 		float f = 0;
@@ -409,7 +347,7 @@ namespace Script {
 		while (count--) {
 			f += th.StackPop().float_;
 			if (th.StackSize() < 0) {
-				th.errorCode = WorkstackUnderflow;
+				th.SetErrorCode(WorkstackUnderflow);
 				return Error;
 			}
 		}
@@ -422,7 +360,7 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opMul(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackTop().float_ *= f;
 		return None;
@@ -431,9 +369,9 @@ namespace Script {
 	//	Stk : Opt+1 / 1
 	//	Opt : 乗算回数(1で普通の乗算) ※ 要素数ではない
 	ReturnState opMuls(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option + 1, 1)) return Error;
+		if (th.CheckStack(code.option + 1, 1)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOperand;
+			th.SetErrorCode(InvalidOperand);
 			return Error;
 		}
 		float f = 1;
@@ -441,7 +379,7 @@ namespace Script {
 		while (count--) {
 			f *= th.StackPop().float_;
 			if (th.StackSize() < 0) {
-				th.errorCode = WorkstackUnderflow;
+				th.SetErrorCode(WorkstackUnderflow);
 				return Error;
 			}
 		}
@@ -454,8 +392,8 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opSub(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
-		float f = (code.option < 0 ? th.state->workarea[code.option] : th.StackPop());
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
+		float f = (code.option < 0 ? th.GetState()->At(code.option) : th.StackPop());
 		th.StackTop().float_ -= f;
 		return None;
 	};
@@ -463,7 +401,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opNeg(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(-f);
 		return None;
@@ -472,7 +410,7 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opDiv(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackTop().float_ /= f;
 		return None;
@@ -481,7 +419,7 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opMod(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackTop() = fmod(th.StackTop(), f);
 		return None;
@@ -490,7 +428,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opSin(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(sin(f));
 		return None;
@@ -499,7 +437,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opCos(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(cos(f));
 		return None;
@@ -508,7 +446,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opTan(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(tan(f));
 		return None;
@@ -517,7 +455,7 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opArg(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackTop() = atan2(f, th.StackTop());
 		return None;
@@ -526,7 +464,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opSqrt(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(sqrt(f));
 		return None;
@@ -535,7 +473,7 @@ namespace Script {
 	//	Stk : 2 / 1 or 1 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opPow(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option == -1 ? 2 : 1, 1)) return Error;
+		if (th.CheckStack(code.option == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackTop() = pow(th.StackTop(), f);
 		return None;
@@ -544,7 +482,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opLog(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(log(f));
 		return None;
@@ -553,7 +491,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opLog10(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(log10(f));
 		return None;
@@ -563,9 +501,9 @@ namespace Script {
 	//	Stk : Opt / 1
 	//	Opt : 次元の数
 	ReturnState opLen(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option, 1)) return Error;
+		if (th.CheckStack(code.option, 1)) return Error;
 		if (code.option < 0) {
-			th.errorCode = InvalidOperand;
+			th.SetErrorCode(InvalidOperand);
 			return Error;
 		}
 		double d = 0;
@@ -575,7 +513,7 @@ namespace Script {
 			f = th.StackPop();
 			d += f * f;
 			if (th.StackSize() < 0) {
-				th.errorCode = WorkstackUnderflow;
+				th.SetErrorCode(WorkstackUnderflow);
 				return Error;
 			}
 		}
@@ -589,7 +527,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opD2r(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(3.1415926535898f * f / 180);
 		return None;
@@ -599,7 +537,7 @@ namespace Script {
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
 	ReturnState opR2d(Thread& th, const Code& code) {
-		if (CheckStack(th, code.option < 0 ? 1 : 0, 1)) return Error;
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.option == -1 ? th.StackPop() : code.val);
 		th.StackPush(180 * f / 3.1415926535898f);
 		return None;
@@ -610,30 +548,30 @@ namespace Script {
 	//	Stk : 0 / 1
 	//	Opt : 変数番地
 	ReturnState opLod(Thread& th, const Code& code) {
-		if (CheckStack(th, 0, 1)) return Error;
-		th.StackPush(th.state->workarea[code.option]);
+		if (th.CheckStack(0, 1)) return Error;
+		th.StackPush(th.GetState()->At(code.option));
 		return None;
 	};
 	//	変数書き込み(定数アドレス)
 	//	Stk : 1 / 0
 	//	Opt : 変数番地
 	ReturnState opSto(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 0)) return Error;
-		th.state->workarea[code.option] = th.StackPop();
+		if (th.CheckStack(1, 0)) return Error;
+		th.GetState()->At(code.option) = th.StackPop();
 		return None;
 	};
 	//	変数読み込み(可変アドレス)
 	//	Stk : 1 / 1
 	//	Opt : 未使用
 	ReturnState opVlod(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, 1)) return Error;
+		if (th.CheckStack(1, 1)) return Error;
 		auto index = (unsigned int)th.StackTop().float_;
-		if (index < 0 || th.state->workarea.size() <= index) {
-			th.errorCode = InvalidOperand;
+		if (index < 0 || th.GetState()->Count() <= index) {
+			th.SetErrorCode(InvalidOperand);
 			return Error;
 		}
 
-		th.StackTop() = th.state->workarea[index];
+		th.StackTop() = th.GetState()->At(index);
 
 		return None;
 	};
@@ -641,14 +579,14 @@ namespace Script {
 	//	Stk : 2 / 0
 	//	Opt : 未使用
 	ReturnState opVsto(Thread& th, const Code& code) {
-		if (CheckStack(th, 2, 0)) return Error;
+		if (th.CheckStack(2, 0)) return Error;
 		auto index = (unsigned int)th.StackPop().float_;
-		if (index < 0 || th.state->workarea.size() <= index) {
-			th.errorCode = InvalidOperand;
+		if (index < 0 || th.GetState()->Count() <= index) {
+			th.SetErrorCode(InvalidOperand);
 			return Error;
 		}
 
-		th.state->workarea[index] = th.StackPop();
+		th.GetState()->At(index) = th.StackPop();
 
 		return None;
 	};
@@ -662,7 +600,7 @@ namespace Script {
 	//			4 :  〃 -
 	//			5 : NaN
 	ReturnState opSpps(Thread& th, const Code& code) {
-		if (CheckStack(th, 0, 1)) return Error;
+		if (th.CheckStack(0, 1)) return Error;
 		float val;
 
 		switch (code.option) {
@@ -685,7 +623,7 @@ namespace Script {
 				val = -1.0f;
 				break;
 			default:
-				th.errorCode = InvalidOperand;
+				th.SetErrorCode(InvalidOperand);
 				return Error;
 		};
 		th.StackPush(val);
@@ -696,7 +634,7 @@ namespace Script {
 	//	Stk : 1 / Opt + 1
 	//	Opt : 複製する数(0以下は1に補正)
 	ReturnState opDup(Thread& th, const Code& code) {
-		if (CheckStack(th, 1, code.option + 1)) return Error;
+		if (th.CheckStack(1, code.option + 1)) return Error;
 		int count = code.option;
 		if (count <= 0) count = 1;
 		for (int i = 0; i < count; i++) {
@@ -709,7 +647,7 @@ namespace Script {
 	//	Opt : 削除する要素数(0以下は1に補正)
 	ReturnState opDel(Thread& th, const Code& code) {
 		auto n = code.option < 0 ? 1 : code.option;
-		if (CheckStack(th, n, 0)) return Error;
+		if (th.CheckStack(n, 0)) return Error;
 		th.StackPop(n);
 		return None;
 	};
@@ -724,8 +662,7 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : ジャンプ先アドレス
 	ReturnState opCall(Thread& th, const Code& code) {
-		th.callstack.push_back(th.codeindex);
-		th.codeindex = code.option - 1;
+		if (th.GoSub(code.option)) return Error;
 
 		return None;
 	};
@@ -733,12 +670,7 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : 未使用
 	ReturnState opRet(Thread& th, const Code& code) {
-		if (th.callstack.size() == 0) {
-			th.errorCode = CallstackUnderflow;
-			return Error;
-		}
-		th.codeindex = th.callstack.back();
-		th.callstack.pop_back();
+		if (th.ReturnSub()) return Error;
 
 		return None;
 	};
@@ -756,11 +688,11 @@ namespace Script {
 	ReturnState opNsAdd(Thread& th, const Code& code) {
 		unsigned char dst = code.option & 0xFF;
 		unsigned char src = (code.option >> 4) & 0xFF;
-		if (dst < 0 || th.state->workarea.size() <= dst || src < 0 || th.state->workarea.size() <= src) {
-			th.errorCode = WorkareaOutOfRange;
+		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
+			th.SetErrorCode(WorkareaOutOfRange);
 			return Error;
 		}
-		th.state->workarea[dst].float_ += th.state->workarea[src].float_;
+		th.GetState()->At(dst).float_ += th.GetState()->At(src).float_;
 		return None;
 	}
 
@@ -771,11 +703,11 @@ namespace Script {
 	ReturnState opNsSub(Thread& th, const Code& code) {
 		unsigned char dst = code.option & 0xFF;
 		unsigned char src = (code.option >> 4) & 0xFF;
-		if (dst < 0 || th.state->workarea.size() <= dst || src < 0 || th.state->workarea.size() <= src) {
-			th.errorCode = WorkareaOutOfRange;
+		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
+			th.SetErrorCode(WorkareaOutOfRange);
 			return Error;
 		}
-		th.state->workarea[dst].float_ -= th.state->workarea[src].float_;
+		th.GetState()->At(dst).float_ -= th.GetState()->At(src).float_;
 		return None;
 	}
 
@@ -786,11 +718,11 @@ namespace Script {
 	ReturnState opNsMul(Thread& th, const Code& code) {
 		unsigned char dst = code.option & 0xFF;
 		unsigned char src = (code.option >> 4) & 0xFF;
-		if (dst < 0 || th.state->workarea.size() <= dst || src < 0 || th.state->workarea.size() <= src) {
-			th.errorCode = WorkareaOutOfRange;
+		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
+			th.SetErrorCode(WorkareaOutOfRange);
 			return Error;
 		}
-		th.state->workarea[dst].float_ *= th.state->workarea[src].float_;
+		th.GetState()->At(dst).float_ *= th.GetState()->At(src).float_;
 		return None;
 	}
 
@@ -801,11 +733,11 @@ namespace Script {
 	ReturnState opNsDiv(Thread& th, const Code& code) {
 		unsigned char dst = code.option & 0xFF;
 		unsigned char src = (code.option >> 4) & 0xFF;
-		if (dst < 0 || th.state->workarea.size() <= dst || src < 0 || th.state->workarea.size() <= src) {
-			th.errorCode = WorkareaOutOfRange;
+		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
+			th.SetErrorCode(WorkareaOutOfRange);
 			return Error;
 		}
-		th.state->workarea[dst].float_ /= th.state->workarea[src].float_;
+		th.GetState()->At(dst).float_ /= th.GetState()->At(src).float_;
 		return None;
 	}
 

@@ -46,8 +46,8 @@ namespace Script {
 	};
 
 	struct Code;
-	struct State;
-	struct Thread;
+	class State;
+	class Thread;
 
 	/// <summery>ワークスタックとワークエリアに格納される値の単位。単精度浮動小数点数と符号付き32ビット整数、型無しポインタの共用体。</summery>
 	union Value {
@@ -67,11 +67,6 @@ namespace Script {
 
 	/// <summery>スクリプトの処理の一単位。</summery>
 	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
-
-	template <typename Fn>
-	inline Opcode ToOpcode(Fn fn) {
-		return fn;
-	}
 
 	/// <summery>実行の最小単位。実処理を行うOpcodeと追加のオプション値からなる。初期化時に何もオプションを指定しなかった場合、整数-1が設定される。</summery>
 	struct Code {
@@ -111,13 +106,16 @@ namespace Script {
 	};
 
 	/// <summery>実行中のグローバルな情報を格納するクラス</summery>
-	struct State : public std::enable_shared_from_this<State> {
+	class State : public std::enable_shared_from_this<State> {
+	public:
 		typedef std::shared_ptr<State> Ptr;
 
+	protected:
 		std::shared_ptr<CodeProvider> provider;
 		std::vector<Value> workarea;
 		void* registry;
 
+	public:
 		State(std::shared_ptr<CodeProvider>);
 
 		/// <summery>指定のコードインデックスから開始するスレッドを作成する。未指定の場合はインデックス0番から開始する。</summery>
@@ -125,13 +123,24 @@ namespace Script {
 		/// <summery>指定名称のコードインデックスから開始するスレッドを作成する。</summery>
 		std::shared_ptr<Thread> CreateThread(const char* entryPoint);
 
+		CodeProvider* GetCodeProvider() { return provider.get(); }
+
+		Value& At(int index) { return workarea[index]; }
+		size_t Count() { return workarea.size(); }
+
+		void * GetRegistry() { return registry; }
+		void SetRegistry(void* ptr) { registry = ptr; }
+
+
 		/// <summery>ワークエリアを整数値0で初期化する。</summery>
 		void Reset();
 	};
 
-	struct Thread {
+	class Thread {
+	public:
 		typedef std::shared_ptr<Thread> Ptr;
 
+	private:
 		std::shared_ptr<State> state;
 
 		std::vector<Value> workstack;
@@ -142,22 +151,43 @@ namespace Script {
 		int waitcount;
 		ErrorType errorCode;
 
+	public:
+
 		Thread(std::shared_ptr<State>, int);
+
+		State* GetState() { return state.get(); }
+		CodeProvider* GetCodeProvider() { return state->GetCodeProvider(); }
+
+		int GetCodeIndex() { return codeindex; }
+		void SetCodeIndex(int newindex) { codeindex = newindex; }
+		void AddCodeIndex(int offset) { codeindex += offset; }
+		int GetWaitCount() { return waitcount; }
+		ReturnState WaitThread(int count) { waitcount = count; return Wait; }
+
+		ErrorType GetErrorCode() { return errorCode; }
+		void SetErrorCode(ErrorType e) { errorCode = e; }
 
 		/// <summery>スクリプトを実行する。nowaitを指定するとReturnState::Waitで中断されなくなる。</summery>
 		ReturnState Run(bool nowait = false);
 		/// <summery>スレッドのスタック等を完全に削除し、指定されたコードインデックスから実行するように設定する。未指定の場合はインデックス0番から開始する。</summery>
 		void Reset(int ep = 0);
 
+		ReturnState CheckStack(unsigned int pop, unsigned int push);
 		Value StackPop(int count = 1);
 		Value StackPush(Value);
 		Value& StackTop();
 		unsigned int StackSize();
 		void ClearStack();
 
-		bool FramePush(int pass);
-		bool FramePop(int pass);
+		ReturnState FramePush(int pass);
+		ReturnState FramePop(int pass);
 
+		ReturnState GoSub(int addr);
+		ReturnState ReturnSub();
+
+		size_t CallStackSize() { return callstack.size(); }
+		size_t WorkStackSize() { return workstack.size(); }
+		Value& WorkStackAt(int index) { return workstack[index]; }
 	};
 
 
