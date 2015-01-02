@@ -17,6 +17,8 @@ namespace Script { namespace Loader {
 		std::vector<Code> codes;
 		std::unordered_map<std::string, int> entrypoints;
 
+		std::vector<std::string> stringTable;
+
 		const Code& Get(int index) override {
 			return codes[index];
 		}
@@ -26,28 +28,39 @@ namespace Script { namespace Loader {
 		}
 
 		int Label(const char* ent) override {
-			return entrypoints[ent];
+			auto it = entrypoints.find(ent);
+			if (it == entrypoints.end()) return -1;
+			return it->second;
 		}
+
+		const char* GetString(int id) {
+			if (id < 0 || stringTable.size() <= (size_t)id) return nullptr;
+			return stringTable[id].c_str();
+		}
+
+		
 	};
 
 	std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen) {
 		std::ifstream file(filepath);
 		if (file.bad()) return nullptr;
 
-
-
 		std::string wholeText((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
+		return FromString(wholeText, gen);
+	}
+
+	std::shared_ptr<CodeProvider> FromString(const std::string& source, Generator& gen) {
 		std::vector<Code> codes;
-		codes.reserve((size_t)wholeText.size() / 8);
+		codes.reserve((size_t)source.size() / 8);
 		std::unordered_map<std::string, int> entrypoints;
 		std::unordered_multimap<std::string, int> epToSolve;
 
 
-		
-		auto end = wholeText.end();
-		for (auto begin = wholeText.begin(); begin != end; /* nop */) {
-			
+
+		auto end = source.end();
+		for (auto begin = source.begin(); begin != end; /* nop */) {
+
 			auto &skip = boost::spirit::ascii::space;
 
 			using boost::spirit::qi::phrase_parse;
@@ -59,24 +72,28 @@ namespace Script { namespace Loader {
 
 			if (phrase_parse(begin, end, Q::float_, skip, num)) {
 				// float
+
 				codes.emplace_back(opPush, num);
 			}
 			else if (phrase_parse(begin, end, ('<' >> Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))] >> '>'), skip, strlabel)) {
 				// エントリポイント
+
 				entrypoints[strlabel] = codes.size();
 			}
 			else if (phrase_parse(begin, end, ('*' >> Q::int_), skip, intlabel)) {
 				// ラベル
+
 				codes.emplace_back(nullptr, intlabel);
 			}
 			else {
 				// 命令のはず
+
 				std::string sig, attr;
 
 				if (!phrase_parse(begin, end, Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))], skip, sig)) {
 					// 失敗した
 					std::string failed_part;
-					int dist = std::distance(wholeText.begin(), begin);
+					int dist = std::distance(source.begin(), begin);
 					if (std::distance(begin, end) > 12) {
 						failed_part.assign(begin, begin + 8);
 						failed_part += "...";
@@ -87,7 +104,7 @@ namespace Script { namespace Loader {
 					throw std::domain_error("cannot parse at [" + failed_part + "] (byte " + std::to_string(dist) + ")");
 				}
 
-				phrase_parse(begin, end, '[' >> Q::lexeme[*(Q::char_ - ']')] >> ']', skip, attr);
+				phrase_parse(begin, end, '[' >> Q::no_skip[*(Q::char_ - ']')] >> ']', skip, attr);
 
 				std::string ep;
 				try {
@@ -104,8 +121,6 @@ namespace Script { namespace Loader {
 				}
 
 			}
-
-
 
 		}
 
@@ -139,6 +154,7 @@ namespace Script { namespace Loader {
 		auto ret = new SimpleCodeProvider;
 		ret->codes = std::move(codes);
 		ret->entrypoints = std::move(entrypoints);
+		ret->stringTable = std::move(gen.stringTable);
 
 		return std::shared_ptr<CodeProvider>(ret);
 	}
@@ -176,14 +192,9 @@ namespace Script { namespace Loader {
 	}
 
 	Generator::Generator() {
-#define OPMAPI(name, op) \
-	map[ #name ] = { op , AttrType::Integer }
-
-#define OPMAPF(name, op) \
-	map[ #name ] = { op , AttrType::Float }
-
-#define OPMAP(name, op, attr) \
-	map[ #name ] = { op , attr }
+#define OPMAPI(name, op) map[ #name ] = { op , AttrType::Integer }
+#define OPMAPF(name, op) map[ #name ] = { op , AttrType::Float }
+#define OPMAP(name, op, attr) map[ #name ] = { op , attr }
 
 		OPMAPI(nop, opNull);
 
@@ -254,6 +265,7 @@ namespace Script { namespace Loader {
 		OPMAPI(ddiv, opNsDiv);
 
 #undef OPMAP
+#undef OPMAPF
 #undef OPMAPI
 
 	}
@@ -279,6 +291,12 @@ namespace Script { namespace Loader {
 				if (!ParseAttrAsInteger(c, attr)) {
 					outBindSymbol.assign(attr);
 				}
+				break;
+			case AttrType::Property:
+				ParseAttrAsProperty(c, attr);
+				break;
+			case AttrType::String:
+				ParseAttrAsString(c, attr);
 				break;
 		}
 
@@ -328,6 +346,24 @@ namespace Script { namespace Loader {
 		c.option = std::distance(list.begin(), it);
 		return c.option != list.size();
 	}
+
+	bool Generator::ParseAttrAsString(Code& c, const std::string& attr) {
+		if (attr.size() == 0) return false;
+
+		// 同じ文字列が局所的に出現するケースの方が多そうな気がするので逆順検索
+		auto it = std::find(stringTable.rbegin(), stringTable.rend(), attr);
+		if (it != stringTable.rend()) {
+			// 同一インデックスを返す
+			c.option = (int)(std::distance(it, stringTable.rend()) - 1);
+		}
+		else {
+			// 末尾追加
+			c.option = (int)stringTable.size();
+			stringTable.push_back(attr);
+		}
+		return true;
+	}
+
 
 }}
 

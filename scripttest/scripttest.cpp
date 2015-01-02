@@ -11,11 +11,12 @@ namespace SL = Script::Loader;
 #include <iostream>
 
 S::ReturnState opPrint(S::Thread& th, const S::Code& c) {
-	std::cout << "stack trace start" << std::endl;
+	auto s = th.GetCodeProvider()->GetString(c.option);
+	std::cout << "stack trace (" << (s ? s : "(null)") << ") start" << std::endl;
 	for (auto i = (size_t)0; i < th.WorkStackSize(); i++) {
 		std::cout << "\t#" << i << " : " << th.WorkStackAt(i).float_ << std::endl;
 	}
-	std::cout << "stack trace end" << std::endl;
+	std::cout << "stack trace (" << (s ? s : "(null)") << ") end" << std::endl;
 
 	return S::ReturnState::None;
 }
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
 
 	SL::Generator gen;
 	
-	gen.map["print"] = { opPrint, SL::AttrType::Integer };
+	gen.map["print"] = { opPrint, SL::AttrType::String };
 
 	auto prov = SL::Load("script.txt", gen);
 	//auto prov = SL::FromCodeSet(codes);

@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <stdint.h>
 
 namespace Script {
@@ -86,6 +87,8 @@ namespace Script {
 		Code(Fn f, float n) : opcode{ f }, val{ n } {}
 		template<typename Fn>
 		Code(Fn f, int32_t i) : opcode{ f }, option{ i } {}
+		template<typename Fn>
+		Code(Fn f, const char* s) : opcode{ f }, str{ s } {}
 
 	};
 
@@ -100,6 +103,8 @@ namespace Script {
 		virtual int Length() = 0;
 		/// <summery>指定された名称に関連付けられたコードインデックスを得る。存在しない場合は-1を返す。</summery>
 		virtual int Label(const char* name) = 0;
+		/// <summery>文字列テーブルから文字列を得る。存在しないIDの場合はnullptrを返す。</summery>
+		virtual const char* GetString(int id) = 0;
 
 		/// <summery>Stateを作成する</summery>
 		virtual std::shared_ptr<State> CreateState();
@@ -200,6 +205,7 @@ namespace Script {
 				SpecialNumbers,
 				EntryPointSymbol,
 				Property,
+				String,
 			};
 
 		class Generator {
@@ -210,6 +216,7 @@ namespace Script {
 			};
 
 			std::unordered_map<std::string, CodeSkelton> map;
+			std::vector<std::string> stringTable;
 
 			Generator();
 
@@ -221,9 +228,12 @@ namespace Script {
 			bool ParseAttrAsComparer(Code& c, const std::string& attr);
 			bool ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
 			bool ParseAttrAsProperty(Code& c, const std::string& attr);
+			bool ParseAttrAsString(Code& c, const std::string& attr);
 		};
 
 		std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen);
+		std::shared_ptr<CodeProvider> FromString(const std::string& source, Generator& gen);
+
 		std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes,
 												  std::unordered_map<std::string, int>&& entrypoints);
 		std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes,
