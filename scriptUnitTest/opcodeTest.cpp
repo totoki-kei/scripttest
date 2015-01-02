@@ -76,11 +76,11 @@ namespace scriptUnitTest
 			std::string source = R"(
 st[aaa]
 st[bbb]
-st[aaa]
-st[ccc]
+st["aaa"]
+st['ccc"']
 st[d d d  ]
 st[ eee ]
-st[ f f f]
+st[" f f f"]
 st[eee]
 )";
 			Loader::Generator gen;
@@ -95,12 +95,11 @@ st[eee]
 			Assert::AreEqual((const char*)nullptr, cp->GetString(-1), L"index -1");
 			Assert::AreEqual((std::string)"aaa", (std::string)cp->GetString(0), L"index 0");
 			Assert::AreEqual((std::string)"bbb", (std::string)cp->GetString(1), L"index 1");
-			Assert::AreEqual((std::string)"ccc", (std::string)cp->GetString(2), L"index 2");
-			Assert::AreEqual((std::string)"d d d  ", (std::string)cp->GetString(3), L"index 3");
-			Assert::AreEqual((std::string)" eee ", (std::string)cp->GetString(4), L"index 4");
+			Assert::AreEqual((std::string)"ccc\"", (std::string)cp->GetString(2), L"index 2");
+			Assert::AreEqual((std::string)"d d d", (std::string)cp->GetString(3), L"index 3");
+			Assert::AreEqual((std::string)"eee", (std::string)cp->GetString(4), L"index 4");
 			Assert::AreEqual((std::string)" f f f", (std::string)cp->GetString(5), L"index 5");
-			Assert::AreEqual((std::string)"eee", (std::string)cp->GetString(6), L"index 5");
-			Assert::AreEqual((const char*)nullptr, cp->GetString(7), L"index 6");
+			Assert::AreEqual((const char*)nullptr, cp->GetString(6), L"index 6");
 
 			auto state = cp->CreateState();
 			auto thread = state->CreateThread();
@@ -120,7 +119,7 @@ st[eee]
 			Assert::AreEqual(3, result[4].first, L"Result[4]");
 			Assert::AreEqual(4, result[5].first, L"Result[5]");
 			Assert::AreEqual(5, result[6].first, L"Result[6]");
-			Assert::AreEqual(6, result[7].first, L"Result[7]");
+			Assert::AreEqual(4, result[7].first, L"Result[7]");
 		}
 
 	};

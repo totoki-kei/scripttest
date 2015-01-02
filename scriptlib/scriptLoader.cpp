@@ -350,8 +350,30 @@ namespace Script { namespace Loader {
 	bool Generator::ParseAttrAsString(Code& c, const std::string& attr) {
 		if (attr.size() == 0) return false;
 
+		auto a = attr.begin();
+		auto b = attr.end() - 1;
+
+		// 左右の空白を除去
+		while (std::isspace(*a) && a != b) a++;
+		while (std::isspace(*b) && a != b) b--;
+
+		// ダブルクォートまたはシングルクォートを除去
+		if (*a == '"' && *b == '"') {
+			a++;
+			b--;
+		}
+		else if (*a == '\'' && *b == '\'') {
+			a++;
+			b--;
+		}
+
+		// イテレータが交差してしまった場合は終了
+		if (a > b) return false;
+
+		std::string s(a, b + 1);
+
 		// 同じ文字列が局所的に出現するケースの方が多そうな気がするので逆順検索
-		auto it = std::find(stringTable.rbegin(), stringTable.rend(), attr);
+		auto it = std::find(stringTable.rbegin(), stringTable.rend(), s);
 		if (it != stringTable.rend()) {
 			// 同一インデックスを返す
 			c.option = (int)(std::distance(it, stringTable.rend()) - 1);
@@ -359,7 +381,7 @@ namespace Script { namespace Loader {
 		else {
 			// 末尾追加
 			c.option = (int)stringTable.size();
-			stringTable.push_back(attr);
+			stringTable.push_back(s);
 		}
 		return true;
 	}
