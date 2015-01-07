@@ -30,7 +30,7 @@ namespace Script {
 			OPMAPI(jump_neg, opJneg);
 
 			OPMAP(cmp, opCmp, AttrType::Comparer);
-			OPMAP(chk, opIs, AttrType::SpecialNumbers);
+			OPMAP(chk, opIs, AttrType::NumAttribute);
 
 			OPMAPI(fwd, opFwd);
 			OPMAPI(rew, opRew);
@@ -61,7 +61,7 @@ namespace Script {
 			OPMAPI(set, opSto);
 			OPMAPI(vget, opVlod);
 			OPMAPI(vset, opVsto);
-			OPMAP(n, opSpps, AttrType::SpecialNumbers);
+			OPMAP(n, opSpps, AttrType::NumAttribute);
 
 			OPMAPI(dup, opDup);
 			OPMAPI(pop, opDel);

@@ -211,8 +211,8 @@ namespace Script { namespace Loader {
 			case AttrType::Comparer:
 				ParseAttrAsComparer(c, attr);
 				break;
-			case AttrType::SpecialNumbers:
-				ParseAttrAsSpecialNumbers(c, attr);
+			case AttrType::NumAttribute:
+				ParseAttrAsNumAttribute(c, attr);
 				break;
 			case AttrType::EntryPointSymbol:
 				if (!ParseAttrAsInteger(c, attr)) {
@@ -259,7 +259,7 @@ namespace Script { namespace Loader {
 		c.option = std::distance(list.begin(), it);
 		return c.option != list.size();
 	}
-	bool Generator::ParseAttrAsSpecialNumbers(Code& c, const std::string& attr) {
+	bool Generator::ParseAttrAsNumAttribute(Code& c, const std::string& attr) {
 		if (attr.size() == 0) return false;
 		std::initializer_list<std::string> list = { "zero", "nonzero", "plus", "notplus", "minus", "notminus", "posinf", "notposinf", "neginf", "notneginf", "nan", "notnan" };
 		auto it = std::find(list.begin(), list.end(), attr);

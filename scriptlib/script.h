@@ -202,7 +202,7 @@ namespace Script {
 			Integer,
 			Float,
 			Comparer,
-			SpecialNumbers,
+			NumAttribute,
 			EntryPointSymbol,
 			Property,
 			String,
@@ -227,7 +227,7 @@ namespace Script {
 			bool ParseAttrAsInteger(Code& c, const std::string& attr);
 			bool ParseAttrAsFloat(Code& c, const std::string& attr);
 			bool ParseAttrAsComparer(Code& c, const std::string& attr);
-			bool ParseAttrAsSpecialNumbers(Code& c, const std::string& attr);
+			bool ParseAttrAsNumAttribute(Code& c, const std::string& attr);
 			bool ParseAttrAsProperty(Code& c, const std::string& attr);
 			bool ParseAttrAsString(Code& c, const std::string& attr);
 		};
