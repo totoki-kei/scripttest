@@ -198,22 +198,23 @@ namespace Script {
 
 
 	namespace Loader {
-			enum AttrType {
-				Integer,
-				Float,
-				Comparer,
-				SpecialNumbers,
-				EntryPointSymbol,
-				Property,
-				String,
-			};
+		enum AttrType {
+			Integer,
+			Float,
+			Comparer,
+			SpecialNumbers,
+			EntryPointSymbol,
+			Property,
+			String,
+		};
+
+		struct CodeSkelton {
+			Opcode opcode;
+			AttrType type;
+		};
 
 		class Generator {
 		public:
-			struct CodeSkelton {
-				Opcode opcode;
-				AttrType type;
-			};
 
 			std::unordered_map<std::string, CodeSkelton> map;
 			std::vector<std::string> stringTable;

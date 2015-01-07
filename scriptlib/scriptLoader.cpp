@@ -61,10 +61,12 @@ namespace Script { namespace Loader {
 		auto end = source.end();
 		for (auto begin = source.begin(); begin != end; /* nop */) {
 
-			auto &skip = boost::spirit::ascii::space;
+			namespace Q = boost::spirit::qi;
+
+			auto &skip = ("/*" >> *((Q::byte_ - '*') | ('*' >> (Q::byte_ - '/'))) >> "*/") | (Q::space);
 
 			using boost::spirit::qi::phrase_parse;
-			namespace Q = boost::spirit::qi;
+			using boost::spirit::qi::parse;
 
 			float num;
 			std::string strlabel;
@@ -192,82 +194,7 @@ namespace Script { namespace Loader {
 	}
 
 	Generator::Generator() {
-#define OPMAPI(name, op) map[ #name ] = { op , AttrType::Integer }
-#define OPMAPF(name, op) map[ #name ] = { op , AttrType::Float }
-#define OPMAP(name, op, attr) map[ #name ] = { op , attr }
-
-		OPMAPI(nop, opNull);
-
-		OPMAPI(wait, opWait);
-		OPMAPI(end, opEnd);
-		
-		OPMAP(goto, opGoto, AttrType::EntryPointSymbol);
-
-		OPMAPI(jump, opJmp);
-		OPMAPI(jump_eq, opJeq);
-		OPMAPI(jump_neq, opJne);
-		OPMAPI(jump_gt, opJgt);
-		OPMAPI(jump_geq, opJge);
-		OPMAPI(jump_lt, opJlt);
-		OPMAPI(jump_leq, opJle);
-		OPMAPI(jump_zero, opJz);
-		OPMAPI(jump_nonzero, opJnz);
-		OPMAPI(jump_pos, opJpos);
-		OPMAPI(jump_neg, opJneg);
-
-		OPMAP(cmp, opCmp, AttrType::Comparer);
-		OPMAP(chk, opIs, AttrType::SpecialNumbers);
-
-		OPMAPI(fwd, opFwd);
-		OPMAPI(rew, opRew);
-
-		OPMAPF(add, opAdd);
-		OPMAPI(adds, opAdds);
-		OPMAPF(mul, opMul);
-		OPMAPI(muls, opMuls);
-		OPMAPF(sub, opSub);
-		OPMAPF(neg, opNeg);
-		OPMAPF(div, opDiv);
-		OPMAPF(mod, opMod);
-		OPMAPF(sin, opSin);
-		OPMAPF(cos, opCos);
-		OPMAPF(tan, opTan);
-		OPMAPF(atan, opArg);
-		OPMAPF(sqrt, opSqrt);
-		OPMAPF(pow, opPow);
-		OPMAPF(log, opLog);
-		OPMAPF(ln, opLog10);
-		OPMAPI(len, opLen);
-		OPMAPF(deg2rad, opD2r);
-		OPMAPF(rad2deg, opR2d);
-
-		OPMAPI(get, opLod);
-		OPMAPI(set, opSto);
-		OPMAPI(vget, opVlod);
-		OPMAPI(vset, opVsto);
-		OPMAP(n, opSpps, AttrType::SpecialNumbers);
-
-		OPMAPI(dup, opDup);
-		OPMAPI(pop, opDel);
-		OPMAPI(clear, opCls);
-
-		OPMAP(call, opCall, AttrType::EntryPointSymbol);
-		OPMAPI(ret, opRet);
-
-		OPMAPI(enter, opPushSb);
-		OPMAPI(leave, opPopSb);
-
-		OPMAP(push, opPush, AttrType::Float);
-
-		OPMAPI(dadd, opNsAdd);
-		OPMAPI(dsub, opNsSub);
-		OPMAPI(dmul, opNsMul);
-		OPMAPI(ddiv, opNsDiv);
-
-#undef OPMAP
-#undef OPMAPF
-#undef OPMAPI
-
+		BuildOpcodes(map);
 	}
 
 	Code Generator::operator ()(const std::string& sig, const std::string& attr, std::string& outBindSymbol) {
@@ -327,7 +254,7 @@ namespace Script { namespace Loader {
 	}
 	bool Generator::ParseAttrAsComparer(Code& c, const std::string& attr) {
 		if (attr.size() == 0) return false;
-		std::initializer_list<std::string> list = { "==", "!=", ">", ">=", "<", "<=", "and", "nand", "or", "nor", "xor", "nxor" };
+		std::initializer_list<std::string> list = { "==", "!=", ">", "<=", "<", ">=", "and", "nand", "or", "nor", "xor", "nxor" };
 		auto it = std::find(list.begin(), list.end(), attr);
 		c.option = std::distance(list.begin(), it);
 		return c.option != list.size();

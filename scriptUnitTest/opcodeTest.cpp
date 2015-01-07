@@ -43,6 +43,53 @@ namespace scriptUnitTest
 			Assert::AreEqual(2, thread->GetCodeIndex());
 		}
 
+		TEST_METHOD(OpWait) {
+			Code code[] = {
+				N(10), P(opWait), N(20), P(opWait, 3), N(30), P(opEnd),
+			};
+			auto cp = Loader::FromCodeSet(std::vector<Code>(std::begin(code), std::end(code)));
+			auto state = cp->CreateState();
+			auto thread = state->CreateThread();
+
+			{
+				auto ret = thread->Run();
+				Assert::AreEqual((size_t)0, thread->CallStackSize());
+				Assert::AreEqual((size_t)1, thread->WorkStackSize());
+				Assert::AreEqual((int)ReturnState::Wait, (int)ret);
+				Assert::AreEqual((int)ErrorType::OK, (int)thread->GetErrorCode());
+				Assert::AreEqual(2, thread->GetCodeIndex());
+			}
+
+			{
+				auto ret = thread->Run();
+				Assert::AreEqual((size_t)0, thread->CallStackSize());
+				Assert::AreEqual((size_t)2, thread->WorkStackSize());
+				Assert::AreEqual((int)ReturnState::Wait, (int)ret);
+				Assert::AreEqual((int)ErrorType::OK, (int)thread->GetErrorCode());
+				Assert::AreEqual(4, thread->GetCodeIndex());
+			}
+
+			{
+				auto ret = thread->Run();
+				Assert::AreEqual((size_t)0, thread->CallStackSize());
+				Assert::AreEqual((size_t)2, thread->WorkStackSize());
+				Assert::AreEqual((int)ReturnState::Wait, (int)ret);
+				Assert::AreEqual((int)ErrorType::OK, (int)thread->GetErrorCode());
+				Assert::AreEqual(4, thread->GetCodeIndex());
+			}
+			
+			{
+				thread->Reset(0);
+				auto ret = thread->Run(true);
+				Assert::AreEqual((size_t)0, thread->CallStackSize());
+				Assert::AreEqual((size_t)3, thread->WorkStackSize());
+				Assert::AreEqual((int)ReturnState::Finished, (int)ret);
+				Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode());
+				Assert::AreEqual(5, thread->GetCodeIndex());
+			}
+		}
+
+
 		TEST_METHOD(OpStackFrame) {
 			Code code[] = {
 				N(10), N(20),   // 10.0     20.0 <
@@ -79,8 +126,11 @@ st[bbb]
 st["aaa"]
 st['ccc"']
 st[d d d  ]
+/* comment 
+  test */
 st[ eee ]
 st[" f f f"]
+/* 日本語 * コメント / テスト */
 st[eee]
 )";
 			Loader::Generator gen;

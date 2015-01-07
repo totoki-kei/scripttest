@@ -48,7 +48,8 @@ namespace Script {
 			if (code.opcode) {
 				switch (ReturnState rs = code.opcode(*this, code)) {
 					case Wait:
-						if (!nowait) break;;
+						if (nowait) break;;
+
 						codeindex++;
 						/* fall-through */
 					case Error:
@@ -151,8 +152,8 @@ namespace Script {
 
 	ReturnState Thread::ReturnSub() {
 		if (callstack.size() == 0) {
-			SetErrorCode(CallstackUnderflow);
-			return Error;
+			SetErrorCode(ScriptHasFinished);
+			return Finished;
 		}
 		SetCodeIndex(callstack.back());
 		callstack.pop_back();

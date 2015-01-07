@@ -4,6 +4,88 @@
 #include <math.h>
 
 namespace Script {
+	namespace Loader {
+		void BuildOpcodes(std::unordered_map<std::string, CodeSkelton>& map) {
+#define OPMAPI(name, op) map[ #name ] = { op , AttrType::Integer }
+#define OPMAPF(name, op) map[ #name ] = { op , AttrType::Float }
+#define OPMAP(name, op, attr) map[ #name ] = { op , attr }
+
+			OPMAPI(nop, opNull);
+
+			OPMAPI(wait, opWait);
+			OPMAPI(end, opEnd);
+
+			OPMAP(goto, opGoto, AttrType::EntryPointSymbol);
+
+			OPMAPI(jump, opJmp);
+			OPMAPI(jump_eq, opJeq);
+			OPMAPI(jump_neq, opJne);
+			OPMAPI(jump_gt, opJgt);
+			OPMAPI(jump_geq, opJge);
+			OPMAPI(jump_lt, opJlt);
+			OPMAPI(jump_leq, opJle);
+			OPMAPI(jump_zero, opJz);
+			OPMAPI(jump_nonzero, opJnz);
+			OPMAPI(jump_pos, opJpos);
+			OPMAPI(jump_neg, opJneg);
+
+			OPMAP(cmp, opCmp, AttrType::Comparer);
+			OPMAP(chk, opIs, AttrType::SpecialNumbers);
+
+			OPMAPI(fwd, opFwd);
+			OPMAPI(rew, opRew);
+
+			OPMAPF(add, opAdd);
+			OPMAPI(adds, opAdds);
+			OPMAPF(mul, opMul);
+			OPMAPI(muls, opMuls);
+			OPMAPF(sub, opSub);
+			OPMAPF(neg, opNeg);
+			OPMAPF(div, opDiv);
+			OPMAPF(mod, opMod);
+			OPMAPF(sin, opSin);
+			OPMAPF(cos, opCos);
+			OPMAPF(sincos, opSinCos);
+			OPMAPF(cossin, opCosSin);
+			OPMAPF(tan, opTan);
+			OPMAPF(atan, opArg);
+			OPMAPF(sqrt, opSqrt);
+			OPMAPF(pow, opPow);
+			OPMAPF(log, opLog);
+			OPMAPF(ln, opLog10);
+			OPMAPI(len, opLen);
+			OPMAPF(deg2rad, opD2r);
+			OPMAPF(rad2deg, opR2d);
+
+			OPMAPI(get, opLod);
+			OPMAPI(set, opSto);
+			OPMAPI(vget, opVlod);
+			OPMAPI(vset, opVsto);
+			OPMAP(n, opSpps, AttrType::SpecialNumbers);
+
+			OPMAPI(dup, opDup);
+			OPMAPI(pop, opDel);
+			OPMAPI(clear, opCls);
+
+			OPMAP(call, opCall, AttrType::EntryPointSymbol);
+			OPMAPI(ret, opRet);
+
+			OPMAPI(enter, opPushSb);
+			OPMAPI(leave, opPopSb);
+
+			OPMAPF(push, opPush);
+			OPMAPI(stklen, opStkLen);
+
+			OPMAPI(dadd, opNsAdd);
+			OPMAPI(dsub, opNsSub);
+			OPMAPI(dmul, opNsMul);
+			OPMAPI(ddiv, opNsDiv);
+
+#undef OPMAP
+#undef OPMAPF
+#undef OPMAPI
+		}
+	}
 
 	//	未定義の命令語
 	//	Stk : 0 / 0
@@ -337,11 +419,11 @@ namespace Script {
 	//	Stk : Opt+1 / 1
 	//	Opt : 加算回数(1で普通の加算) ※ 要素数ではない
 	ReturnState opAdds(Thread& th, const Code& code) {
-		if (th.CheckStack(code.option + 1, 1)) return Error;
-		if (code.option < 0) {
-			th.SetErrorCode(InvalidOperand);
+		if (code.option <= 0) {
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
+		if (th.CheckStack(code.option + 1, 1)) return Error;
 		float f = 0;
 		int count = code.option;
 		while (count--) {
@@ -369,11 +451,11 @@ namespace Script {
 	//	Stk : Opt+1 / 1
 	//	Opt : 乗算回数(1で普通の乗算) ※ 要素数ではない
 	ReturnState opMuls(Thread& th, const Code& code) {
-		if (th.CheckStack(code.option + 1, 1)) return Error;
-		if (code.option < 0) {
-			th.SetErrorCode(InvalidOperand);
+		if (code.option <= 0) {
+			th.SetErrorCode(InvalidOpcode);
 			return Error;
 		}
+		if (th.CheckStack(code.option + 1, 1)) return Error;
 		float f = 1;
 		int count = code.option;
 		while (count--) {
@@ -442,6 +524,29 @@ namespace Script {
 		th.StackPush(cos(f));
 		return None;
 	};
+
+	//	正弦と余弦(正弦、余弦、の順にプッシュされる)
+	//	Stk : 1 / 2 or 0 / 2
+	//	Opt : 整数-1,または即値
+	ReturnState opSinCos(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 2)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(sin(f));
+		th.StackPush(cos(f));
+		return None;
+	};
+
+	//	正弦と余弦(余弦、正弦、の順にプッシュされる)
+	//	Stk : 1 / 2 or 0 / 2
+	//	Opt : 整数-1,または即値
+	ReturnState opCosSin(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 2)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(cos(f));
+		th.StackPush(sin(f));
+		return None;
+	};
+
 	//	正接
 	//	Stk : 1 / 1 or 0 / 1
 	//	Opt : 整数-1,または即値
@@ -593,37 +698,37 @@ namespace Script {
 	//	特殊値プッシュ
 	//	Stk : 0 / 1
 	//	Opt : 積む値の種類
-	//			0 : 0
-	//			1 : 1
-	//			2 : -1
-	//			3 : 無限+
-	//			4 :  〃 -
-	//			5 : NaN
+	//			 0 : 0
+	//			 2 : 1
+	//			 4 : -1
+	//			 6 : 無限+
+	//			 8 :  〃 -
+	//			10 : NaN
 	ReturnState opSpps(Thread& th, const Code& code) {
 		if (th.CheckStack(0, 1)) return Error;
 		float val;
 
 		switch (code.option) {
-			case 5:
-				*((uint32_t*)&val) = 0x7FBFFFFF;
-				break;
-			case 3:
-				val = 1e18f;
-				break;
-			case 4:
-				val = -1e18f;
-				break;
 			case 0:
 				val = 0.0f;
 				break;
-			case 1:
+			case 2:
 				val = 1.0f;
 				break;
-			case 2:
+			case 4:
 				val = -1.0f;
 				break;
-			default:
-				th.SetErrorCode(InvalidOperand);
+			case 6:
+				*((uint32_t*)&val) = 0x7FBFFFFF;
+				break;
+			case 8:
+				val = 1e18f;
+				break;
+			case 10:
+				val = -1e18f;
+				break;
+			default: // 否定ビット付きの場合もここに流れる
+				th.SetErrorCode(InvalidOpcode);
 				return Error;
 		};
 		th.StackPush(val);
@@ -662,7 +767,7 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : ジャンプ先アドレス
 	ReturnState opCall(Thread& th, const Code& code) {
-		if (th.GoSub(code.option)) return Error;
+		if (auto ret = th.GoSub(code.option)) return ret;
 
 		return None;
 	};
@@ -670,7 +775,7 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : 未使用
 	ReturnState opRet(Thread& th, const Code& code) {
-		if (th.ReturnSub()) return Error;
+		if (auto ret = th.ReturnSub()) return ret;
 
 		return None;
 	};
@@ -680,7 +785,13 @@ namespace Script {
 
 		return None;
 	}
-	
+
+	ReturnState opStkLen(Thread& th, const Code& code) {
+		th.StackPush((float)th.StackSize());
+
+		return None;
+	}
+
 	// 定数アドレス変数間の直接加算
 	//	Stk : 0 / 0
 	//	Opt : Opt[0-3] 加算先アドレス(0 - 255)
@@ -744,7 +855,7 @@ namespace Script {
 	ReturnState opPushSb(Thread& th, const Code& code) {
 		int n = code.option;
 		if (n < 0) n = 0;
-		if (th.FramePush(n)) return Error;
+		if (auto ret = th.FramePush(n)) return ret;
 
 		return None;
 	}
@@ -752,7 +863,7 @@ namespace Script {
 	ReturnState opPopSb(Thread& th, const Code& code) {
 		int n = code.option;
 		if (n < 0) n = 0;
-		if (th.FramePop(n)) return Error;
+		if (auto ret = th.FramePop(n)) return ret;
 
 		return None;
 	}
