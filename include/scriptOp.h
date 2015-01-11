@@ -49,6 +49,21 @@ namespace Script {
 	ReturnState opLen(Thread&, const Code&);
 	ReturnState opD2r(Thread&, const Code&);
 	ReturnState opR2d(Thread&, const Code&);
+	ReturnState opAbs(Thread&, const Code&);
+	ReturnState opRound(Thread&, const Code&);
+	ReturnState opTrunc(Thread&, const Code&);
+	ReturnState opFloor(Thread&, const Code&);
+	ReturnState opCeil(Thread&, const Code&);
+
+	ReturnState opI2n(Thread&, const Code&);
+	ReturnState opN2i(Thread&, const Code&);
+	ReturnState opIPush(Thread&, const Code&);
+	ReturnState opILsh(Thread&, const Code&);
+	ReturnState opIRsh(Thread&, const Code&);
+	ReturnState opIAnd(Thread&, const Code&);
+	ReturnState opIOr(Thread&, const Code&);
+	ReturnState opIXor(Thread&, const Code&);
+	ReturnState opIBool(Thread&, const Code&);
 
 	ReturnState opLod(Thread&, const Code&);
 	ReturnState opSto(Thread&, const Code&);

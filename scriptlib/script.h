@@ -9,9 +9,8 @@
 #include <stdint.h>
 
 namespace Script {
-	/**
-	* <summery>Codeの実行結果を表す列挙対</summery>
-	*/
+
+	/// <summery>Codeの実行結果を表す列挙対</summery>
 	enum ReturnState {
 		/// <summery>正常に完了</summery>
 		None = 0,
@@ -24,9 +23,7 @@ namespace Script {
 		Finished,
 	};
 
-	/**
-	* <summery>スクリプトエラーの情報</summery>
-	*/
+	/// <summery>スクリプトエラーの情報</summery>
 	enum ErrorType {
 		OK = 0,
 		FileCannotOpen = 0x10,
@@ -95,6 +92,7 @@ namespace Script {
 	/// <summery>一連のコード群を提供するクラス</summery>
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
+		/// <summery>ポインタ型(shared_ptr)</summery>
 		typedef std::shared_ptr<CodeProvider> Ptr;
 
 		/// <summery>指定インデックスのCodeを得る</summery>
@@ -130,7 +128,12 @@ namespace Script {
 
 		CodeProvider* GetCodeProvider() { return provider.get(); }
 
-		Value& At(int index) { return workarea[index]; }
+		Value& At(int index) {
+			if (index <= 256 && index >= (int)workarea.size()) {
+				workarea.resize(index + 1);
+			}
+			return workarea[index]; 
+		}
 		size_t Count() { return workarea.size(); }
 
 		void * GetRegistry() { return registry; }

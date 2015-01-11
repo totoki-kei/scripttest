@@ -89,7 +89,6 @@ namespace scriptUnitTest
 			}
 		}
 
-
 		TEST_METHOD(OpStackFrame) {
 			Code code[] = {
 				N(10), N(20),   // 10.0     20.0 <
@@ -114,6 +113,46 @@ namespace scriptUnitTest
 			Assert::AreEqual((int)ReturnState::Finished, (int)ret, L"final : returnstate");
 			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode(), L"final : errortype");
 			Assert::AreEqual(195.0f, thread->WorkStackAt(0).float_, L"final : stack[0]");
+
+		}
+
+		TEST_METHOD(OpRounding) {
+			Code code[] = {
+				N(20.7),
+				P(opDup, 4),
+				P(opRound), P(opSto, 0),
+				P(opTrunc), P(opSto, 1),
+				P(opCeil), P(opSto, 2),
+				P(opFloor), P(opSto, 3),
+
+				P(opNeg),
+				P(opDup, 4),
+				P(opRound), P(opSto, 4),
+				P(opTrunc), P(opSto, 5),
+				P(opCeil), P(opSto, 6),
+				P(opFloor), P(opSto, 7),
+
+				P(opEnd),
+			};
+			auto cp = Loader::FromCodeSet(std::vector<Code>(std::begin(code), std::end(code)));
+			auto state = cp->CreateState();
+			auto thread = state->CreateThread();
+
+			auto ret = thread->Run(true);
+			Assert::AreEqual((size_t)0, thread->CallStackSize());
+			Assert::AreEqual((size_t)1, thread->WorkStackSize());
+			Assert::AreEqual((int)ReturnState::Finished, (int)ret);
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode());
+			
+			Assert::AreEqual(21.0f, state->At(0).float_);
+			Assert::AreEqual(20.0f, state->At(1).float_);
+			Assert::AreEqual(21.0f, state->At(2).float_);
+			Assert::AreEqual(20.0f, state->At(3).float_);
+
+			Assert::AreEqual(-21.0f, state->At(4).float_);
+			Assert::AreEqual(-20.0f, state->At(5).float_);
+			Assert::AreEqual(-20.0f, state->At(6).float_);
+			Assert::AreEqual(-21.0f, state->At(7).float_);
 
 		}
 

@@ -56,6 +56,21 @@ namespace Script {
 			OPMAPI(len, opLen);
 			OPMAPF(deg2rad, opD2r);
 			OPMAPF(rad2deg, opR2d);
+			OPMAPF(abs, opAbs);
+			OPMAPF(round, opRound);
+			OPMAPF(trunc, opTrunc);
+			OPMAPF(floor, opFloor);
+			OPMAPF(ceil, opCeil);
+
+			OPMAPI(int2num, opI2n);
+			OPMAPI(num2int, opN2i);
+			OPMAPI(ipush, opIPush);
+			OPMAPI(ilsh, opILsh);
+			OPMAPI(irsh, opIRsh);
+			OPMAPI(iand, opIAnd);
+			OPMAPI(ior, opIOr);
+			OPMAPI(ixor, opIXor);
+			OPMAPI(ibool, opIBool);
 
 			OPMAPI(get, opLod);
 			OPMAPI(set, opSto);
@@ -648,7 +663,149 @@ namespace Script {
 		return None;
 	};
 
+	//	絶対値
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState opAbs(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(abs(f));
+		return None;
+	};
 
+	//	四捨五入
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState opRound(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(round(f));
+		return None;
+	};
+
+	//	ゼロ方向丸め
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState opTrunc(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(trunc(f));
+		return None;
+	};
+
+	//	正方向丸め
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState opCeil(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(ceil(f));
+		return None;
+	};
+
+	//	負方向丸め
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 整数-1,または即値
+	ReturnState opFloor(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 1 : 0, 1)) return Error;
+		float f = (code.option == -1 ? th.StackPop() : code.val);
+		th.StackPush(floor(f));
+		return None;
+	};
+
+	//	整数データを数値化する
+	//	Stk : 1 / 1
+	//	Opt : 数値化前に行われる右シフト量(負の値の時はシフトなし)
+	ReturnState opI2n(Thread& th, const Code& code) {
+		if (th.CheckStack(1, 1)) return Error;
+		int shift = (code.option < 0 ? 0 : code.option);
+		int32_t i = (th.StackPop().int_ >> shift);
+		th.StackPush(static_cast<float>(i));
+		return None;
+	}
+	//	数値を整数データにする(端数はキャストにより丸められる)
+	//	Stk : 1 / 1
+	//	Opt : 未使用
+	ReturnState opN2i(Thread& th, const Code& code) {
+		if (th.CheckStack(1, 1)) return Error;
+		th.StackPush(static_cast<int32_t>(th.StackPop().float_));
+		return None;
+	}
+	//	整数値をプッシュする
+	//	Stk : 0 / 1
+	//	Opt : プッシュする整数
+	ReturnState opIPush(Thread& th, const Code& code) {
+		if (th.CheckStack(0, 1)) return Error;
+		th.StackPush(code.option);
+		return None;
+	}
+	//	整数値を左シフトする
+	//	Stk : 1 / 1 or 0 / 1
+	//	Opt : 負数(スタックトップから数値を使用)、またはシフト量
+	//
+	//	Note: スタックから取り出すのは数値であって整数ではない
+	ReturnState opILsh(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 2 : 1, 1)) return Error;
+		int32_t sh = (code.option < 0 ? (int32_t)th.StackPop().float_ : code.option);
+		if (sh < 0) {
+			th.SetErrorCode(InvalidOperand);
+			return Error;
+		}
+		th.StackTop().int_ <<= sh;
+		return None;
+	}
+	//	整数値を算術右シフトする
+	//	Stk : 2 / 1 or 1 / 1
+	//	Opt : 負数(スタックトップから数値を使用)、またはシフト量
+	//
+	//	Note: スタックから取り出すのは数値であって整数ではない
+	ReturnState opIRsh(Thread& th, const Code& code) {
+		if (th.CheckStack(code.option < 0 ? 2 : 1, 1)) return Error;
+		int32_t sh = (code.option < 0 ? (int32_t)th.StackPop().float_ : code.option);
+		if (sh < 0) {
+			th.SetErrorCode(InvalidOperand);
+			return Error;
+		}
+		th.StackTop().int_ >>= sh;
+		return None;
+	}
+	//	整数値のビット論理積
+	//	Stk : 2 / 1
+	//	Opt : 未使用
+	ReturnState opIAnd(Thread& th, const Code& code) {
+		if (th.CheckStack(2, 1)) return Error;
+		auto right = th.StackPop().int_;
+		th.StackTop().int_ &= right;
+		return None;
+	}
+	//	整数値のビット論理和
+	//	Stk : 2 / 1
+	//	Opt : 未使用
+	ReturnState opIOr(Thread& th, const Code& code) {
+		if (th.CheckStack(2, 1)) return Error;
+		auto right = th.StackPop().int_;
+		th.StackTop().int_ |= right;
+		return None;
+	}
+	//	整数値のビット反転
+	//	Stk : 2 / 1
+	//	Opt : 未使用
+	ReturnState opIXor(Thread& th, const Code& code) {
+		if (th.CheckStack(2, 1)) return Error;
+		auto right = th.StackPop().int_;
+		th.StackTop().int_ |= right;
+		return None;
+	}
+	//	整数値を1.0または0.0に変換
+	//	Stk : 1 / 1
+	//	Opt : 未使用
+	ReturnState opIBool(Thread& th, const Code& code) {
+		if (th.CheckStack(1, 1)) return Error;
+		th.StackTop().float_ = (float)(!!th.StackTop().int_);
+		return None;
+	}
+
+	
 	//	変数読み出し(定数アドレス)
 	//	Stk : 0 / 1
 	//	Opt : 変数番地
