@@ -11,7 +11,7 @@ namespace SL = Script::Loader;
 #include <iostream>
 
 S::ReturnState opPrint(S::Thread& th, const S::Code& c) {
-	auto s = th.GetCodeProvider()->GetString(c.option);
+	auto s = th.GetCodeProvider()->GetString(c.attr.int_);
 	std::cout << "stack trace (" << (s ? s : "(null)") << ") start" << std::endl;
 	for (auto i = (size_t)0; i < th.WorkStackSize(); i++) {
 		std::cout << "\t#" << i << " : " << th.WorkStackAt(i).float_ << std::endl;

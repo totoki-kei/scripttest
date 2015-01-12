@@ -135,7 +135,7 @@ namespace Script { namespace Loader {
 				while (it != epToSolve.end()) {
 					auto ep = entrypoints.find(it->first);
 					if (ep != entrypoints.end()) {
-						codes[it->second].option = ep->second;
+						codes[it->second].attr.ep_ = (uint32_t)ep->second;
 
 						auto next = it;
 						next++;
@@ -211,8 +211,8 @@ namespace Script { namespace Loader {
 			case AttrType::Comparer:
 				ParseAttrAsComparer(c, attr);
 				break;
-			case AttrType::NumAttribute:
-				ParseAttrAsNumAttribute(c, attr);
+			case AttrType::NumType:
+				ParseAttrAsNumType(c, attr);
 				break;
 			case AttrType::EntryPointSymbol:
 				if (!ParseAttrAsInteger(c, attr)) {
@@ -234,7 +234,7 @@ namespace Script { namespace Loader {
 		if (attr.size() == 0) return false;
 		size_t szt;
 		try {
-			c.option = std::stoi(attr, &szt, 0); // 基数自動判別
+			c.attr.int_ = std::stoi(attr, &szt, 0); // 基数自動判別
 		}
 		catch (...) {
 			return false;
@@ -245,7 +245,7 @@ namespace Script { namespace Loader {
 		if (attr.size() == 0) return false;
 		size_t szt;
 		try {
-			c.val = std::stof(attr, &szt);
+			c.attr.float_ = std::stof(attr, &szt);
 		}
 		catch (...) {
 			return false;
@@ -254,24 +254,53 @@ namespace Script { namespace Loader {
 	}
 	bool Generator::ParseAttrAsComparer(Code& c, const std::string& attr) {
 		if (attr.size() == 0) return false;
-		std::initializer_list<std::string> list = { "==", "!=", ">", "<=", "<", ">=", "and", "nand", "or", "nor", "xor", "nxor" };
+		std::initializer_list<std::string> list = { 
+			"==", 
+			"!=", 
+			">", 
+			"<=", 
+			"<", 
+			">=", 
+			"and", 
+			"nand", 
+			"or", 
+			"nor", 
+			"xor", 
+			"nxor" 
+		};
 		auto it = std::find(list.begin(), list.end(), attr);
-		c.option = std::distance(list.begin(), it);
-		return c.option != list.size();
+		auto dist = std::distance(list.begin(), it);
+		c.attr.cmp_ = static_cast<ComparerAttribute>(dist);
+		return dist != list.size();
 	}
-	bool Generator::ParseAttrAsNumAttribute(Code& c, const std::string& attr) {
+	bool Generator::ParseAttrAsNumType(Code& c, const std::string& attr) {
 		if (attr.size() == 0) return false;
-		std::initializer_list<std::string> list = { "zero", "nonzero", "plus", "notplus", "minus", "notminus", "posinf", "notposinf", "neginf", "notneginf", "nan", "notnan" };
+		std::initializer_list<std::string> list = {
+			"zero", 
+			"notzero", 
+			"plus", 
+			"notplus", 
+			"minus", 
+			"notminus", 
+			"posinf", 
+			"notposinf", 
+			"neginf", 
+			"notneginf", 
+			"nan", 
+			"notnan" 
+		};
 		auto it = std::find(list.begin(), list.end(), attr);
-		c.option = std::distance(list.begin(), it);
-		return c.option != list.size();
+		auto dist = std::distance(list.begin(), it);
+		c.attr.ntype_ = static_cast<NumTypeAttribute>(dist);
+		return dist != list.size();
 	}
 	bool Generator::ParseAttrAsProperty(Code& c, const std::string& attr) {
 		if (attr.size() == 0) return false;
 		std::initializer_list<std::string> list = { "get", "set" };
 		auto it = std::find(list.begin(), list.end(), attr);
-		c.option = std::distance(list.begin(), it);
-		return c.option != list.size();
+		auto dist = std::distance(list.begin(), it);
+		c.attr.prop_ = static_cast<PropertyAttribute>(dist);
+		return dist != list.size();
 	}
 
 	bool Generator::ParseAttrAsString(Code& c, const std::string& attr) {
@@ -303,11 +332,11 @@ namespace Script { namespace Loader {
 		auto it = std::find(stringTable.rbegin(), stringTable.rend(), s);
 		if (it != stringTable.rend()) {
 			// 同一インデックスを返す
-			c.option = (int)(std::distance(it, stringTable.rend()) - 1);
+			c.attr.str_ = (int)(std::distance(it, stringTable.rend()) - 1);
 		}
 		else {
 			// 末尾追加
-			c.option = (int)stringTable.size();
+			c.attr.str_ = (int)stringTable.size();
 			stringTable.push_back(s);
 		}
 		return true;

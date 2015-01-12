@@ -118,7 +118,7 @@ namespace scriptUnitTest
 
 		TEST_METHOD(OpRounding) {
 			Code code[] = {
-				N(20.7),
+				N(20.7f),
 				P(opDup, 4),
 				P(opRound), P(opSto, 0),
 				P(opTrunc), P(opSto, 1),
@@ -174,7 +174,7 @@ st[eee]
 )";
 			Loader::Generator gen;
 			gen.map["st"] = { [&result](Thread& th, const Code& c) {
-				result.push_back({ c.option, th.GetCodeProvider()->GetString(c.option) });
+				result.push_back({ c.attr.int_, th.GetCodeProvider()->GetString(c.attr.int_) });
 				return None;
 			}, Loader::AttrType::String };
 		

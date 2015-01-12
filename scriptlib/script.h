@@ -43,6 +43,45 @@ namespace Script {
 		ScriptHasFinished,
 	};
 
+	enum class ComparerAttribute : uint32_t {
+		Equal,
+		NotEqual,
+		Greater,
+		LessEqual,
+		Less,
+		GreaterEqual,
+		And,
+		Nand,
+		Or,
+		Nor,
+		Xor,
+		Nxor,
+
+		$NotBit = 0x01,
+	};
+
+	enum class NumTypeAttribute : uint32_t {
+		Zero,
+		NotZero,
+		Plus,
+		NotPlus,
+		Minus,
+		NotMinus,
+		PosInf,
+		NotPosInf,
+		NegInf,
+		NotNegInf,
+		NaN,
+		NotNaN,
+
+		$NotBit = 0x01,
+	};
+
+	enum class PropertyAttribute : uint32_t {
+		Get,
+		Set,
+	};
+
 	struct Code;
 	class State;
 	class Thread;
@@ -70,23 +109,34 @@ namespace Script {
 	struct Code {
 		Opcode opcode;
 
-		union {
-			float val;
-			int32_t option;
-		};
+		union Attribute {
+			float float_;
+			int32_t int_;
+			ComparerAttribute cmp_;
+			NumTypeAttribute ntype_;
+			uint32_t ep_;
+			PropertyAttribute prop_;
+			int32_t str_;
 
-		Code() : opcode{ nullptr }, option{ -1 } { }
+			Attribute() : int_{ 0 } {}
+
+			Attribute(float f) : float_{ f } {}
+			Attribute(int32_t si) : int_{ si } {}
+			Attribute(ComparerAttribute c) : cmp_{ c } {}
+			Attribute(NumTypeAttribute na) : ntype_{ na } {}
+			Attribute(uint32_t ui) : ep_{ ui } {}
+			Attribute(PropertyAttribute p) : prop_{ p } {}
+
+		} attr;
+
+		Code() : opcode{ nullptr }, attr{ -1 } {}
 		Code(const Code&) = default;
 
 		template<typename Fn>
-		Code(Fn f) : opcode{ f }, option{ -1 } {}
-		template<typename Fn>
-		Code(Fn f, float n) : opcode{ f }, val{ n } {}
-		template<typename Fn>
-		Code(Fn f, int32_t i) : opcode{ f }, option{ i } {}
-		template<typename Fn>
-		Code(Fn f, const char* s) : opcode{ f }, str{ s } {}
+		Code(Fn f) : opcode{ f }, attr{ -1 } {}
 
+		template<typename Fn, typename Attr>
+		Code(Fn f, Attr a) : opcode{ f }, attr{ a } {}
 	};
 
 	/// <summery>一連のコード群を提供するクラス</summery>
@@ -205,7 +255,7 @@ namespace Script {
 			Integer,
 			Float,
 			Comparer,
-			NumAttribute,
+			NumType,
 			EntryPointSymbol,
 			Property,
 			String,
@@ -230,7 +280,7 @@ namespace Script {
 			bool ParseAttrAsInteger(Code& c, const std::string& attr);
 			bool ParseAttrAsFloat(Code& c, const std::string& attr);
 			bool ParseAttrAsComparer(Code& c, const std::string& attr);
-			bool ParseAttrAsNumAttribute(Code& c, const std::string& attr);
+			bool ParseAttrAsNumType(Code& c, const std::string& attr);
 			bool ParseAttrAsProperty(Code& c, const std::string& attr);
 			bool ParseAttrAsString(Code& c, const std::string& attr);
 		};
