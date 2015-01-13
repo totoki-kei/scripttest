@@ -80,6 +80,8 @@ namespace Script {
 
 			OPMAPI(dup, opDup);
 			OPMAPI(pop, opDel);
+			OPMAPI(lget, opSLod);
+			OPMAPI(lset, opSSto);
 			OPMAPI(clear, opCls);
 
 			OPMAP(call, opCall, AttrType::EntryPointSymbol);
@@ -938,6 +940,43 @@ namespace Script {
 		}
 		return None;
 	};
+
+	//	スタック内指定位置要素の複製
+	//	Stk : 0 / 1
+	//	Opt : スタックベースからのオフセット
+	//        マイナスの時はトップからの相対位置(-1がスタックトップ)
+	ReturnState opSLod(Thread& th, const Code& code) {
+		int index = code.attr.int_;
+		if (index < 0) index += th.StackSize();
+		if (index < 0) {
+			th.SetErrorCode(InvalidOpcode);
+			return Error;
+		}
+		if (th.CheckStack(index + 1, index + 2)) return Error;
+
+		th.StackPush(th.StackAt(index));
+		return None;
+	};
+
+	//	スタック内指定位置要素への代入
+	//	Stk : 1 / 0
+	//	Opt : スタックベースからのオフセット
+	//        マイナスの時はトップからの相対位置(-1がスタックトップ)
+	ReturnState opSSto(Thread& th, const Code& code) {
+		int index = code.attr.int_;
+		// 先頭要素は設定する値になるため1引いて計算する
+		if (index < 0) index += (th.StackSize() - 1);
+		if (index < 0) {
+			th.SetErrorCode(InvalidOpcode);
+			return Error;
+		}
+		if (th.CheckStack(index + 2, index + 1)) return Error;
+
+		auto val = th.StackPop();
+		th.StackAt(index) = val;
+		return None;
+	};
+
 	//	スタックトップ削除
 	//	Stk : Opt / 0
 	//	Opt : 削除する要素数(0以下は1に補正)

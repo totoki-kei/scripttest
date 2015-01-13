@@ -91,10 +91,29 @@ namespace Script {
 
 	Value& Thread::StackTop() {
 		if (workstack.size() <= stackBase) {
+			this->SetErrorCode(WorkstackUnderflow);
+
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Stack underflow." };
 		}
 		return workstack.back();
+	}
+
+	Value& Thread::StackAt(int index) {
+		if (workstack.size() <= stackBase) {
+			this->SetErrorCode(WorkstackUnderflow);
+
+			// —áŠO‚ð“Š‚°‚é
+			throw std::domain_error{ "Stack underflow." };
+		}
+		if (workstack.size() - stackBase < index) {
+			this->SetErrorCode(InvalidOpcode);
+
+			// —áŠO‚ð“Š‚°‚é
+			throw std::domain_error{ "Invalid stack index." };
+		}
+
+		return workstack.at(stackBase + index);
 	}
 
 	unsigned int Thread::StackSize() {

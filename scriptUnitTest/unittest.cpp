@@ -113,8 +113,56 @@ namespace scriptUnitTest
 			Assert::AreEqual((int)ReturnState::Finished, (int)ret, L"final : returnstate");
 			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode(), L"final : errortype");
 			Assert::AreEqual(195.0f, thread->WorkStackAt(0).float_, L"final : stack[0]");
-
 		}
+
+		TEST_METHOD(OpLocalVariable) {
+			Code code[] = {
+				N(10), N(20),   // 10.0     20.0 <
+				P(opPushSb, 1), // 10.0 [0] 20.0 <
+				P(opSLod, 0),   // 10.0 [0] 20.0 20.0 <
+				P(opDiv),       // 10.0 [0] 1.0 <
+				P(opDup), P(opMul, 2.0f),
+				                // 10.0 [0] 1.0 2.0 <
+				P(opDup), P(opMul, 2.0f),
+				P(opDup), P(opMul, 2.0f),
+				P(opDup), P(opMul, 2.0f),
+				P(opDup), P(opMul, 2.0f),
+				P(opDup), P(opMul, 2.0f),
+				P(opDup), P(opMul, 2.0f),
+				                // 10.0 [0] 1.0 2.0   4.0 8.0 16.0 32.0 64.0 128.0 <
+				P(opSSto, 2),   // 10.0 [0] 1.0 2.0 128.0 8.0 16.0 32.0 64.0 <
+				P(opSSto, -2),  // 10.0 [0] 1.0 2.0 128.0 8.0 64.0 32.0 <
+				P(opSLod, -5),  // 10.0 [0] 1.0 2.0 128.0 8.0 64.0 32.0 2.0 <
+				P(opWait),
+				P(opAdds, 6),   // 10.0 [0] 237.0
+				P(opPopSb, 1),  // 10.0     237.0 <
+				P(opAdd),       // 247.0 <
+
+				P(opEnd),
+			};
+			auto cp = Loader::FromCodeSet(std::vector<Code>(std::begin(code), std::end(code)));
+			auto state = cp->CreateState();
+			auto thread = state->CreateThread();
+
+			auto ret = thread->Run();
+
+			Assert::AreEqual(1.0f, thread->StackAt(0).float_, L"proceeding : stack[0]");
+			Assert::AreEqual(2.0f, thread->StackAt(1).float_, L"proceeding : stack[1]");
+			Assert::AreEqual(128.0f, thread->StackAt(2).float_, L"proceeding : stack[2]");
+			Assert::AreEqual(8.0f, thread->StackAt(3).float_, L"proceeding : stack[3]");
+			Assert::AreEqual(64.0f, thread->StackAt(4).float_, L"proceeding : stack[4]");
+			Assert::AreEqual(32.0f, thread->StackAt(5).float_, L"proceeding : stack[5]");
+			Assert::AreEqual(2.0f, thread->StackAt(6).float_, L"proceeding : stack[6]");
+
+			ret = thread->Run();
+
+			Assert::AreEqual((size_t)0, thread->CallStackSize(), L"final : callstack");
+			Assert::AreEqual((size_t)1, thread->WorkStackSize(), L"final : workstack");
+			Assert::AreEqual((int)ReturnState::Finished, (int)ret, L"final : returnstate");
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode(), L"final : errortype");
+			Assert::AreEqual(247.0f, thread->WorkStackAt(0).float_, L"final : stack[0]");
+		}
+		
 
 		TEST_METHOD(OpRounding) {
 			Code code[] = {
