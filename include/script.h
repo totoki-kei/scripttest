@@ -10,20 +10,20 @@
 
 namespace Script {
 
-	/// <summery>Codeの実行結果を表す列挙対</summery>
+	/// <summary>Codeの実行結果を表す列挙対</summary>
 	enum ReturnState {
-		/// <summery>正常に完了</summery>
+		/// <summary>正常に完了</summary>
 		None = 0,
-		/// <summery>スクリプトを中断する</summery>
+		/// <summary>スクリプトを中断する</summary>
 		Wait,
-		/// <summery>エラーが発生した</summery>
+		/// <summary>エラーが発生した</summary>
 		/// <remark>これを返す場合は、ThreadのerrorCodeメンバにエラー理由を格納すること。</remark>
 		Error,
-		/// <summery>スクリプトが終了した</summery>
+		/// <summary>スクリプトが終了した</summary>
 		Finished,
 	};
 
-	/// <summery>スクリプトエラーの情報</summery>
+	/// <summary>スクリプトエラーの情報</summary>
 	enum ErrorType {
 		OK = 0,
 		FileCannotOpen = 0x10,
@@ -86,7 +86,7 @@ namespace Script {
 	class State;
 	class Thread;
 
-	/// <summery>ワークスタックとワークエリアに格納される値の単位。単精度浮動小数点数と符号付き32ビット整数、型無しポインタの共用体。</summery>
+	/// <summary>ワークスタックとワークエリアに格納される値の単位。単精度浮動小数点数と符号付き32ビット整数、型無しポインタの共用体。</summary>
 	union Value {
 		float float_;
 		int32_t int_;
@@ -102,10 +102,10 @@ namespace Script {
 		operator void*&() { return ptr_; }
 	};
 
-	/// <summery>スクリプトの処理の一単位。</summery>
+	/// <summary>スクリプトの処理の一単位。</summary>
 	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
 
-	/// <summery>実行の最小単位。実処理を行うOpcodeと追加のオプション値からなる。初期化時に何もオプションを指定しなかった場合、整数-1が設定される。</summery>
+	/// <summary>実行の最小単位。実処理を行うOpcodeと追加のオプション値からなる。初期化時に何もオプションを指定しなかった場合、整数-1が設定される。</summary>
 	struct Code {
 		Opcode opcode;
 
@@ -139,26 +139,26 @@ namespace Script {
 		Code(Fn f, Attr a) : opcode{ f }, attr{ a } {}
 	};
 
-	/// <summery>一連のコード群を提供するクラス</summery>
+	/// <summary>一連のコード群を提供するクラス</summary>
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
-		/// <summery>ポインタ型(shared_ptr)</summery>
+		/// <summary>ポインタ型(shared_ptr)</summary>
 		typedef std::shared_ptr<CodeProvider> Ptr;
 
-		/// <summery>指定インデックスのCodeを得る</summery>
+		/// <summary>指定インデックスのCodeを得る</summary>
 		virtual const Code& Get(int index) = 0;
-		/// <summery>コード群のサイズを得る。</summery>
+		/// <summary>コード群のサイズを得る。</summary>
 		virtual int Length() = 0;
-		/// <summery>指定された名称に関連付けられたコードインデックスを得る。存在しない場合は-1を返す。</summery>
+		/// <summary>指定された名称に関連付けられたコードインデックスを得る。存在しない場合は-1を返す。</summary>
 		virtual int Label(const char* name) = 0;
-		/// <summery>文字列テーブルから文字列を得る。存在しないIDの場合はnullptrを返す。</summery>
+		/// <summary>文字列テーブルから文字列を得る。存在しないIDの場合はnullptrを返す。</summary>
 		virtual const char* GetString(int id) = 0;
 
-		/// <summery>Stateを作成する</summery>
+		/// <summary>Stateを作成する</summary>
 		virtual std::shared_ptr<State> CreateState();
 	};
 
-	/// <summery>実行中のグローバルな情報を格納するクラス</summery>
+	/// <summary>実行中のグローバルな情報を格納するクラス</summary>
 	class State : public std::enable_shared_from_this<State> {
 	public:
 		typedef std::shared_ptr<State> Ptr;
@@ -171,9 +171,9 @@ namespace Script {
 	public:
 		State(std::shared_ptr<CodeProvider>);
 
-		/// <summery>指定のコードインデックスから開始するスレッドを作成する。未指定の場合はインデックス0番から開始する。</summery>
+		/// <summary>指定のコードインデックスから開始するスレッドを作成する。未指定の場合はインデックス0番から開始する。</summary>
 		std::shared_ptr<Thread> CreateThread(int entryPoint = 0);
-		/// <summery>指定名称のコードインデックスから開始するスレッドを作成する。</summery>
+		/// <summary>指定名称のコードインデックスから開始するスレッドを作成する。</summary>
 		std::shared_ptr<Thread> CreateThread(const char* entryPoint);
 
 		CodeProvider* GetCodeProvider() { return provider.get(); }
@@ -190,7 +190,7 @@ namespace Script {
 		void SetRegistry(void* ptr) { registry = ptr; }
 
 
-		/// <summery>ワークエリアを整数値0で初期化する。</summery>
+		/// <summary>ワークエリアを整数値0で初期化する。</summary>
 		void Reset();
 	};
 
@@ -225,15 +225,16 @@ namespace Script {
 		ErrorType GetErrorCode() { return errorCode; }
 		void SetErrorCode(ErrorType e) { errorCode = e; }
 
-		/// <summery>スクリプトを実行する。nowaitを指定するとReturnState::Waitで中断されなくなる。</summery>
+		/// <summary>スクリプトを実行する。nowaitを指定するとReturnState::Waitで中断されなくなる。</summary>
 		ReturnState Run(bool nowait = false);
-		/// <summery>スレッドのスタック等を完全に削除し、指定されたコードインデックスから実行するように設定する。未指定の場合はインデックス0番から開始する。</summery>
+		/// <summary>スレッドのスタック等を完全に削除し、指定されたコードインデックスから実行するように設定する。未指定の場合はインデックス0番から開始する。</summary>
 		void Reset(int ep = 0);
 
 		ReturnState CheckStack(unsigned int pop, unsigned int push);
 		Value StackPop(int count = 1);
 		Value StackPush(Value);
 		Value& StackTop();
+		Value& StackAt(int index);
 		unsigned int StackSize();
 		void ClearStack();
 
