@@ -3,11 +3,8 @@
 
 #include <unordered_map>
 #include <fstream>
-
-
-#include <boost/spirit/include/qi.hpp>
-#include <boost/phoenix.hpp>
-#include <boost/fusion/tuple.hpp>
+#include <locale>
+#include <string>
 
 namespace Script { namespace Loader {
 	
@@ -50,73 +47,166 @@ namespace Script { namespace Loader {
 		return FromString(wholeText, gen);
 	}
 
+	size_t ParseFloat(const char* str, float* outFloat) {
+		while (*str != '\0' && isspace(*str)) str++;
+
+		char* end;
+		*outFloat = strtof(str, &end);
+
+		return (size_t)(end - str);
+	}
+
+	size_t ParseSymbol(const char* str, std::string& outSymbol) {
+		auto p = str;
+
+		while (*p != '\0' && isspace(*p)) p++;
+
+		auto begin = p;
+
+		std::function<bool(const char)> checker = [](const char c) { return isalpha(c) || strchr("#$%_", c); };
+		while (*p != '\0' && !isspace(*p) && *p != '>' && checker(*p)) {
+			p++;
+			checker = [](const char c) { return isalnum(c) || strchr("#$%_", c); };
+		}
+
+		if (begin != p) {
+			outSymbol.assign(begin, p);
+			return (size_t)(p - str);
+		}
+
+		return 0;
+	}
+
+	size_t ParseEntryPoint(const char* str, std::string& outLabel) {
+		auto p = str;
+
+		while (*p != '\0' && isspace(*p)) p++;
+
+		if (*p++ != '<') return 0u;
+		
+		while (*p != '\0' && isspace(*p)) p++;
+
+		if (size_t symbol_len = ParseSymbol(p, outLabel)) {
+			p += symbol_len;
+			// 閉じ'>'が無かったら失敗
+			while (*p != '\0' && isspace(*p)) p++;
+			if (*p != '>') return 0;
+		}
+		else {
+			return 0;
+		}
+
+		return (size_t)(p + 1 - str);
+	}
+
+	size_t ParseLabel(const char* str, int* outLabelId) {
+		auto p = str;
+		while (*p != '\0' && isspace(*p)) p++;
+
+		if (*p != '*') return 0;
+		p++;
+
+		char* end = nullptr;
+		*outLabelId = strtol(p, &end, 0);
+		if (p == end) {
+			return 0;
+		}
+
+		return (size_t)(end - str);
+	}
+
+	size_t ParseAttribute(const char* str, std::string& outAttr) {
+		auto p = str;
+		while (*p != '\0' && isspace(*p)) p++;
+
+		if (*p != '[') {
+			// 属性開始じゃない
+			return 0;
+		}
+		p++;
+
+		auto start = p;
+		while (*p != '\0' && *p != ']') {
+			p++;
+		}
+
+		if (*p == ']') {
+			outAttr.assign(start, p);
+			return (size_t)(p + 1 - str);
+		}
+		
+		return 0;
+	}
+
 	std::shared_ptr<CodeProvider> FromString(const std::string& source, Generator& gen) {
 		std::vector<Code> codes;
 		codes.reserve((size_t)source.size() / 8);
 		std::unordered_map<std::string, int> entrypoints;
 		std::unordered_multimap<std::string, int> epToSolve;
 
+		auto c_start = source.c_str();
+		for (auto c = c_start; *c != '\0'; /* nop */) {
 
+			//namespace Q = boost::spirit::qi;
 
-		auto end = source.end();
-		for (auto begin = source.begin(); begin != end; /* nop */) {
-
-			namespace Q = boost::spirit::qi;
-
-			auto &skip = ("/*" >> *((Q::byte_ - '*') | ('*' >> (Q::byte_ - '/'))) >> "*/") | (Q::space);
-
-			using boost::spirit::qi::phrase_parse;
-			using boost::spirit::qi::parse;
 
 			float num;
 			std::string strlabel;
 			int intlabel;
 
-			if (phrase_parse(begin, end, Q::float_, skip, num)) {
+			while (*c != '\0' && isspace(*c)) c++;
+			if (*c == '\0') break;
+
+			if (size_t len = ParseFloat(c, &num)) {
 				// float
 
 				codes.emplace_back(opPush, num);
+				c += len;
 			}
-			else if (phrase_parse(begin, end, ('<' >> Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))] >> '>'), skip, strlabel)) {
+			else if (size_t len = ParseEntryPoint(c, strlabel)) {
 				// エントリポイント
 
 				entrypoints[strlabel] = codes.size();
+				c += len;
 			}
-			else if (phrase_parse(begin, end, ('*' >> Q::int_), skip, intlabel)) {
+			else if (size_t len = ParseLabel(c, &intlabel)) {
 				// ラベル
 
 				codes.emplace_back(nullptr, intlabel);
+				c += len;
 			}
 			else {
 				// 命令のはず
 
 				std::string sig, attr;
 
-				if (!phrase_parse(begin, end, Q::lexeme[(Q::alpha | Q::char_("#$%_")) >> *(Q::alnum | Q::char_("#$%_"))], skip, sig)) {
+				size_t symbol_len = ParseSymbol(c, sig);
+				if (symbol_len == 0) {
 					// 失敗した
 					std::string failed_part;
-					int dist = std::distance(source.begin(), begin);
-					if (std::distance(begin, end) > 12) {
-						failed_part.assign(begin, begin + 8);
+					int dist = std::distance(c_start, c);
+					if (strlen(c) > 12) {
+						failed_part.assign(c, c + 8);
 						failed_part += "...";
 					}
 					else {
-						failed_part.assign(begin, end);
+						failed_part.assign(c);
 					}
 					throw std::domain_error("cannot parse at [" + failed_part + "] (byte " + std::to_string(dist) + ")");
 				}
+				c += symbol_len;
 
-				phrase_parse(begin, end, '[' >> Q::no_skip[*(Q::char_ - ']')] >> ']', skip, attr);
+				size_t attr_len = ParseAttribute(c, attr);
 
 				std::string ep;
 				try {
-					Code c = gen(sig, attr, ep);
+					Code code = gen(sig, attr, ep);
 					if (ep.size()) {
 						epToSolve.insert({ ep, (int)codes.size() });
 					}
 
-					codes.push_back(c);
-
+					codes.push_back(code);
+					c += attr_len;
 				}
 				catch (...) {
 					throw std::domain_error("failed to generate code (signature = " + sig + ", attribute = " + attr + ")");
@@ -310,8 +400,8 @@ namespace Script { namespace Loader {
 		auto b = attr.end() - 1;
 
 		// 左右の空白を除去
-		while (std::isspace(*a) && a != b) a++;
-		while (std::isspace(*b) && a != b) b--;
+		while (isspace(*a) && a != b) a++;
+		while (isspace(*b) && a != b) b--;
 
 		// ダブルクォートまたはシングルクォートを除去
 		if (*a == '"' && *b == '"') {

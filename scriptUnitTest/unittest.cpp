@@ -213,11 +213,8 @@ st[bbb]
 st["aaa"]
 st['ccc"']
 st[d d d  ]
-/* comment 
-  test */
 st[ eee ]
 st[" f f f"]
-/* 日本語 * コメント / テスト */
 st[eee]
 )";
 			Loader::Generator gen;
@@ -257,6 +254,60 @@ st[eee]
 			Assert::AreEqual(4, result[5].first, L"Result[5]");
 			Assert::AreEqual(5, result[6].first, L"Result[6]");
 			Assert::AreEqual(4, result[7].first, L"Result[7]");
+		}
+
+		TEST_METHOD(StringParse) {
+			std::vector< std::pair<int, const char*> > result;
+
+			std::string source = R"(
+10
+20
++NAN
+-INF
+<label>
+*10
+hoge[fuga]
+)";
+			Loader::Generator gen;
+			gen.map["hoge"] = { [&result](Thread& th, const Code& c) {
+				result.push_back({ c.attr.int_, th.GetCodeProvider()->GetString(c.attr.int_) });
+				return None;
+			}, Loader::AttrType::String };
+
+
+			auto cp = Loader::FromString(source, gen);
+
+			/*
+
+			Assert::AreEqual((const char*)nullptr, cp->GetString(-1), L"index -1");
+			Assert::AreEqual((std::string)"aaa", (std::string)cp->GetString(0), L"index 0");
+			Assert::AreEqual((std::string)"bbb", (std::string)cp->GetString(1), L"index 1");
+			Assert::AreEqual((std::string)"ccc\"", (std::string)cp->GetString(2), L"index 2");
+			Assert::AreEqual((std::string)"d d d", (std::string)cp->GetString(3), L"index 3");
+			Assert::AreEqual((std::string)"eee", (std::string)cp->GetString(4), L"index 4");
+			Assert::AreEqual((std::string)" f f f", (std::string)cp->GetString(5), L"index 5");
+			Assert::AreEqual((const char*)nullptr, cp->GetString(6), L"index 6");
+
+			auto state = cp->CreateState();
+			auto thread = state->CreateThread();
+
+			auto ret = thread->Run();
+
+			Assert::AreEqual((size_t)0, thread->CallStackSize(), L"final : callstack");
+			Assert::AreEqual((size_t)0, thread->WorkStackSize(), L"final : workstack");
+			Assert::AreEqual((int)ReturnState::Finished, (int)ret, L"final : returnstate");
+			Assert::AreEqual((int)ErrorType::ScriptHasFinished, (int)thread->GetErrorCode(), L"final : errortype");
+
+			Assert::AreEqual((size_t)8, result.size(), L"Result Size");
+			Assert::AreEqual(0, result[0].first, L"Result[0]");
+			Assert::AreEqual(1, result[1].first, L"Result[1]");
+			Assert::AreEqual(0, result[2].first, L"Result[2]");
+			Assert::AreEqual(2, result[3].first, L"Result[3]");
+			Assert::AreEqual(3, result[4].first, L"Result[4]");
+			Assert::AreEqual(4, result[5].first, L"Result[5]");
+			Assert::AreEqual(5, result[6].first, L"Result[6]");
+			Assert::AreEqual(4, result[7].first, L"Result[7]");
+			*/
 		}
 
 	};
