@@ -2,15 +2,16 @@
 
 namespace Script {
 	class ScriptCode;
+	class ScriptEnvironment;
 }
 
 #include "ScriptOpSource.h"
-
+#include "ScriptReturnCode.h"
 #include <functional>
 
 
 namespace Script {
-	typedef std::function<ReturnCode (ScriptEnvironment&, ScriptCode&)> ScriptFunction;
+	typedef std::function<ReturnCode(ScriptEnvironment&, ScriptCode&)> ScriptFunction;
 
 	class ScriptCode
 	{

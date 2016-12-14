@@ -1,5 +1,9 @@
 #pragma once
 
+namespace Script {
+	class BasicScriptFunction;
+}
+
 #include "ScriptCode.h"
 #include "ScriptReturnCode.h"
 

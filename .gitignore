@@ -213,3 +213,5 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+/scripttest.VC.VC.opendb
+/scripttest.VC.db
