@@ -6,7 +6,7 @@
 
 int main()
 {
-	Script::hoge();
+//	Script::hoge();
 	return 0;
 }
 

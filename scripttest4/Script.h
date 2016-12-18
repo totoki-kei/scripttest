@@ -1,25 +1,65 @@
 #pragma once
 
-#include <boost/variant/variant.hpp>
-#include <cstdint>
-#include <string>
+/*
+
+class Nil;
+class Error;
+class Integer;
+class Number;
+class String;
+class Array;
+class Object;
+class NativePtr;
+
+using Value = boost::variant <Nil, Error, Number, String, Array, Object, NativePtr>;
+
+*/
+
+#include "ScriptTypes.h"
+
+#include <boost/variant/multivisitors.hpp>
 
 namespace Script {
-	class Number;
-	class String;
-	class Array;
-	class Object;
-	class NativePtr;
 
-	struct Add;
+	namespace Visitors {
+
+		struct BinAdd;
+		struct BinSub;
+		struct BinMul;
+		struct BinDiv;
+		struct BinEquals;
+		struct BinNotEquals;
+		struct BinLessThan;
+		struct BinLessEqual;
+		struct BinGreaterThan;
+		struct BinGreaterEqual;
+		struct BinAnd;
+		struct BinOr;
+		struct BinBitAnd;
+		struct BinBitOr;
+		struct BinBitXor;
+		struct BinIndex;
+
+		struct UniBool; // operator bool => Integer
+		struct UniNeg;
+		struct UniNot;
+		struct UniLen;
+		struct UniTypeIndex;
+		struct UniTypeName;
+
+		struct UniStr;
+		struct UniNum;
+
+		struct Prop;
+	}
 }
 
 namespace Script {
 
-	//using Value = boost::variant <Number, String, Array, Object, NativePtr>;
-	using Value = boost::variant <int, double>;
+	
+	//using Value = boost::variant <int, double>;
 
-
+#if 0
 	struct Add : boost::static_visitor<Value> {
 		const Value& left_;
 		const Value& right_;
@@ -58,15 +98,15 @@ namespace Script {
 	};
 
 	// Å´ îƒópâª
-
+#endif
 	template <typename Op>
 	struct BinaryOperation : boost::static_visitor<Value> {
 		const Value& left_;
 		const Value& right_;
 
 		BinaryOperation() = delete;
-		BinaryOperation(const Add&) = default;
-		BinaryOperation(Add&&) = default;
+		BinaryOperation(const BinaryOperation<Op>&) = default;
+		BinaryOperation(BinaryOperation<Op>&&) = default;
 
 		BinaryOperation(const Value& left, const Value& right)
 			: left_(left), right_(right)
@@ -97,10 +137,13 @@ namespace Script {
 
 	};
 
-	void hoge() {
-		Value val1 = 1, val2 = 2.5;
-		
-		Value result = Add(val1, val2)();
-		
+	//void hoge() {
+	//	Value val1 = 1, val2 = 2.5;
+	//	
+	//	Value result = Add(val1, val2)();
+	//	
+	//}
+
+	void fuga() {
 	}
 }

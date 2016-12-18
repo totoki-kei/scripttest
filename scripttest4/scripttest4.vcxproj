@@ -146,7 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Script.h" />
-    <ClInclude Include="ScriptTypedef.h" />
+    <ClInclude Include="ScriptTypes.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
