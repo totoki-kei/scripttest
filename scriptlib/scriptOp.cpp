@@ -104,31 +104,31 @@ namespace Script {
 		}
 	}
 
-	//	–¢’è‹`‚Ì–½—ßŒê
+	//	æœªå®šç¾©ã®å‘½ä»¤èª
 	//	Stk : 0 / 0
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opNull(Thread& th, const Code& code) {
 		th.SetErrorCode(InvalidOpcode);
 		return Error;
 	};
-	//	’†’f
+	//	ä¸­æ–­
 	//	Stk : # / #
-	//	Opt : ‘Ò‹@ƒJƒEƒ“ƒg(0ˆÈãA0‚Ìê‡‚Í’†’f‚Ì‚İs‚¤)
+	//	Opt : å¾…æ©Ÿã‚«ã‚¦ãƒ³ãƒˆ(0ä»¥ä¸Šã€0ã®å ´åˆã¯ä¸­æ–­ã®ã¿è¡Œã†)
 	ReturnState opWait(Thread& th, const Code& code) {
 		th.WaitThread(code.attr.int_ > 0 ? code.attr.int_ : 0);
 		return Wait;
 	};
-	//	I—¹
+	//	çµ‚äº†
 	//	Stk : # / #
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opEnd(Thread& th, const Code& code) {
 		th.SetErrorCode(ScriptHasFinished);
 		return Finished;
 	};
 
-	//	â‘ÎˆÊ’u‚Ö‚ÌƒWƒƒƒ“ƒv
+	//	çµ¶å¯¾ä½ç½®ã¸ã®ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 1 / 0 or 0 / 0
-	//	Opt : -1A‚Ü‚½‚ÍƒWƒƒƒ“ƒvˆÊ’u
+	//	Opt : -1ã€ã¾ãŸã¯ã‚¸ãƒ£ãƒ³ãƒ—ä½ç½®
 	ReturnState opGoto(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 0)) return Error;
 		int addr = code.attr.int_ < 0 ? (int)th.StackPop().float_ : code.attr.ep_;
@@ -137,18 +137,18 @@ namespace Script {
 		return None;
 	}
 
-	//	ƒWƒƒƒ“ƒv
+	//	ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 0 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJmp(Thread& th, const Code& code) {
 		if (code.attr.int_ >= 0)
 			th.AddCodeIndex(code.attr.int_);
 		
 		return None;
 	};
-	//	“™‰¿ğŒƒWƒƒƒ“ƒv
+	//	ç­‰ä¾¡æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 2 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJeq(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -162,9 +162,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	•s“™ğŒƒWƒƒƒ“ƒv
+	//	ä¸ç­‰æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 2 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJne(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -178,9 +178,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	’´‰ßğŒƒWƒƒƒ“ƒv
+	//	è¶…éæ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 2 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJgt(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -194,9 +194,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	ˆÈãğŒƒWƒƒƒ“ƒv
+	//	ä»¥ä¸Šæ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 2 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJge(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -210,9 +210,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	–¢–ğŒƒWƒƒƒ“ƒv
+	//	æœªæº€æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 2 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJlt(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -226,9 +226,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	ˆÈ‰ºğŒƒWƒƒƒ“ƒv
+	//	ä»¥ä¸‹æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 2 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJle(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -242,9 +242,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	ƒ[ƒğŒƒWƒƒƒ“ƒv
+	//	ã‚¼ãƒ­æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 1 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJz(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -257,9 +257,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	”ñƒ[ƒğŒƒWƒƒƒ“ƒv
+	//	éã‚¼ãƒ­æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 1 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJnz(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -272,9 +272,9 @@ namespace Script {
 		
 		return None;
 	};
-	//	³”ğŒƒWƒƒƒ“ƒv
+	//	æ­£æ•°æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 1 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJpos(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -287,9 +287,9 @@ namespace Script {
 
 		return None;
 	};
-	//	•‰”ğŒƒWƒƒƒ“ƒv
+	//	è² æ•°æ¡ä»¶ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 1 / 0
-	//	Opt : ƒWƒƒƒ“ƒvƒIƒtƒZƒbƒg
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—ã‚ªãƒ•ã‚»ãƒƒãƒˆ
 	ReturnState opJneg(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
@@ -302,15 +302,15 @@ namespace Script {
 		
 		return None;
 	};
-	//	”äŠr‰‰Z
+	//	æ¯”è¼ƒæ¼”ç®—
 	//	Stk : 2 / 1
-	//	Opt : “®ì“à—e  Opt[0]:”½“]ƒtƒ‰ƒO, Opt[1-3]:“®ìƒtƒ‰ƒO
-	//			0 : “™‰¿
-	//			2 : ’´‰ß
-	//			4 : –¢–
-	//			6 : And(—¼•û‚Æ‚à0ˆÈŠO)
-	//			8 : Or(­‚È‚­‚Æ‚à‚Ç‚¿‚ç‚©‚ª0ˆÈŠO)
-	//			A : Xor(‚Ç‚¿‚ç‚©ˆê•û‚Ì‚İ‚ª0ˆÈŠO)
+	//	Opt : å‹•ä½œå†…å®¹  Opt[0]:åè»¢ãƒ•ãƒ©ã‚°, Opt[1-3]:å‹•ä½œãƒ•ãƒ©ã‚°
+	//			0 : ç­‰ä¾¡
+	//			2 : è¶…é
+	//			4 : æœªæº€
+	//			6 : And(ä¸¡æ–¹ã¨ã‚‚0ä»¥å¤–)
+	//			8 : Or(å°‘ãªãã¨ã‚‚ã©ã¡ã‚‰ã‹ãŒ0ä»¥å¤–)
+	//			A : Xor(ã©ã¡ã‚‰ã‹ä¸€æ–¹ã®ã¿ãŒ0ä»¥å¤–)
 	ReturnState opCmp(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 1)) return Error;
 		if (code.attr.int_ < 0) {
@@ -361,14 +361,14 @@ namespace Script {
 		th.SetErrorCode(InvalidOpcode);
 		return Error;
 	};
-	//	”’l‘®«æ“¾
+	//	æ•°å€¤å±æ€§å–å¾—
 	//	Stk : 1 / 1
-	//	Opt : “®ì“à—e	Opt[0]:”½“]ƒtƒ‰ƒOAOpt[1-3]:“®ìƒtƒ‰ƒO
-	//			0 : ƒ[ƒ
-	//			2 : ³‚Ì”(0ŠÜ‚Ü‚¸)
-	//			4 : •‰‚Ì”(0ŠÜ‚Ü‚¸)
-	//			6 : ³‚Ì–³ŒÀ‘å
-	//			8 : •‰‚Ì–³ŒÀ‘å
+	//	Opt : å‹•ä½œå†…å®¹	Opt[0]:åè»¢ãƒ•ãƒ©ã‚°ã€Opt[1-3]:å‹•ä½œãƒ•ãƒ©ã‚°
+	//			0 : ã‚¼ãƒ­
+	//			2 : æ­£ã®æ•°(0å«ã¾ãš)
+	//			4 : è² ã®æ•°(0å«ã¾ãš)
+	//			6 : æ­£ã®ç„¡é™å¤§
+	//			8 : è² ã®ç„¡é™å¤§
 	//			A : NaN
 	ReturnState opIs(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 1)) return Error;
@@ -415,9 +415,9 @@ namespace Script {
 		th.SetErrorCode(InvalidOpcode);
 		return Error;
 	};
-	//	‘‘—‚è
+	//	æ—©é€ã‚Š
 	//	Stk : 0 / 0
-	//	Opt : ¯•ÊID -1‚Åˆê”Ô‹ß‚¢ƒtƒ‰ƒO
+	//	Opt : è­˜åˆ¥ID -1ã§ä¸€ç•ªè¿‘ã„ãƒ•ãƒ©ã‚°
 	ReturnState opFwd(Thread& th, const Code& code) {
 		int codeindex = th.GetCodeIndex();
 		auto provider = th.GetCodeProvider();
@@ -428,13 +428,13 @@ namespace Script {
 			}
 			codeindex++;
 		}
-		// ÀsŒã‚Éˆê‚Âi‚Ş‚ªAw‚³‚ê‚½ƒR[ƒh‚Í‰½‚àÀs‚µ‚È‚¢ƒR[ƒh‚È‚Ì‚ÅAƒXƒLƒbƒv‚³‚ê‚Ä‚àxá‚Í‚È‚¢B
+		// å®Ÿè¡Œå¾Œã«ä¸€ã¤é€²ã‚€ãŒã€æŒ‡ã•ã‚ŒãŸã‚³ãƒ¼ãƒ‰ã¯ä½•ã‚‚å®Ÿè¡Œã—ãªã„ã‚³ãƒ¼ãƒ‰ãªã®ã§ã€ã‚¹ã‚­ãƒƒãƒ—ã•ã‚Œã¦ã‚‚æ”¯éšœã¯ãªã„ã€‚
 		th.SetCodeIndex(codeindex);
 		return None;
 	};
-	//	Šª‚«–ß‚µ
+	//	å·»ãæˆ»ã—
 	//	Stk : 0 / 0
-	//	Opt : ¯•ÊID -1‚Åˆê”Ô‹ß‚¢ƒtƒ‰ƒO
+	//	Opt : è­˜åˆ¥ID -1ã§ä¸€ç•ªè¿‘ã„ãƒ•ãƒ©ã‚°
 	ReturnState opRew(Thread& th, const Code& code) {
 		int codeindex = th.GetCodeIndex();
 		auto provider = th.GetCodeProvider();
@@ -445,30 +445,30 @@ namespace Script {
 			}
 			codeindex--;
 		}
-		// ÀsŒã‚Éˆê‚Âi‚Ş‚ªAw‚³‚ê‚½ƒR[ƒh‚Í‰½‚àÀs‚µ‚È‚¢ƒR[ƒh‚È‚Ì‚ÅAƒXƒLƒbƒv‚³‚ê‚Ä‚àxá‚Í‚È‚¢B
+		// å®Ÿè¡Œå¾Œã«ä¸€ã¤é€²ã‚€ãŒã€æŒ‡ã•ã‚ŒãŸã‚³ãƒ¼ãƒ‰ã¯ä½•ã‚‚å®Ÿè¡Œã—ãªã„ã‚³ãƒ¼ãƒ‰ãªã®ã§ã€ã‚¹ã‚­ãƒƒãƒ—ã•ã‚Œã¦ã‚‚æ”¯éšœã¯ãªã„ã€‚
 		th.SetCodeIndex(codeindex);
 		return None;
 	};
 #if 0
-	//	Fwd/Rev—pƒ`ƒFƒbƒNƒ|ƒCƒ“ƒg
+	//	Fwd/Revç”¨ãƒã‚§ãƒƒã‚¯ãƒã‚¤ãƒ³ãƒˆ
 	//	Stk : 0 / 0
-	//	Opt : –¢g—p(”íƒWƒƒƒ“ƒv‚ÉƒVƒOƒlƒ`ƒƒ‚Æ‚µ‚Ä—˜—p‚³‚ê‚é)
+	//	Opt : æœªä½¿ç”¨(è¢«ã‚¸ãƒ£ãƒ³ãƒ—æ™‚ã«ã‚·ã‚°ãƒãƒãƒ£ã¨ã—ã¦åˆ©ç”¨ã•ã‚Œã‚‹)
 	ReturnState opCpt(Thread& th, const Code& code) {
 		return None;
 	};
 #endif
-	//	‰ÁZ
+	//	åŠ ç®—
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opAdd(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackTop().float_ += f;
 		return None;
 	};
-	//	˜A‘±‰ÁZ
+	//	é€£ç¶šåŠ ç®—
 	//	Stk : Opt+1 / 1
-	//	Opt : ‰ÁZ‰ñ”(1‚Å•’Ê‚Ì‰ÁZ) ¦ —v‘f”‚Å‚Í‚È‚¢
+	//	Opt : åŠ ç®—å›æ•°(1ã§æ™®é€šã®åŠ ç®—) â€» è¦ç´ æ•°ã§ã¯ãªã„
 	ReturnState opAdds(Thread& th, const Code& code) {
 		if (code.attr.int_ <= 0) {
 			th.SetErrorCode(InvalidOpcode);
@@ -489,18 +489,18 @@ namespace Script {
 
 		return None;
 	};
-	//	æZ
+	//	ä¹—ç®—
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opMul(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackTop().float_ *= f;
 		return None;
 	};
-	//	˜A‘±æZ
+	//	é€£ç¶šä¹—ç®—
 	//	Stk : Opt+1 / 1
-	//	Opt : æZ‰ñ”(1‚Å•’Ê‚ÌæZ) ¦ —v‘f”‚Å‚Í‚È‚¢
+	//	Opt : ä¹—ç®—å›æ•°(1ã§æ™®é€šã®ä¹—ç®—) â€» è¦ç´ æ•°ã§ã¯ãªã„
 	ReturnState opMuls(Thread& th, const Code& code) {
 		if (code.attr.int_ <= 0) {
 			th.SetErrorCode(InvalidOpcode);
@@ -521,54 +521,54 @@ namespace Script {
 
 		return None;
 	};
-	//	Œ¸Z
+	//	æ¸›ç®—
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opSub(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ < 0 ? th.StackPop() : th.StackPop());
 		th.StackTop().float_ -= f;
 		return None;
 	};
-	//	³•‰•ÏŠ·
+	//	æ­£è² å¤‰æ›
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opNeg(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackPush(-f);
 		return None;
 	};
-	//	œZ
+	//	é™¤ç®—
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opDiv(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackTop().float_ /= f;
 		return None;
 	};
-	//	è—]
+	//	å‰°ä½™
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opMod(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackTop() = fmod(th.StackTop(), f);
 		return None;
 	};
-	//	³Œ·
+	//	æ­£å¼¦
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opSin(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackPush(sin(f));
 		return None;
 	};
-	//	—]Œ·
+	//	ä½™å¼¦
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opCos(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -576,9 +576,9 @@ namespace Script {
 		return None;
 	};
 
-	//	³Œ·‚Æ—]Œ·(³Œ·A—]Œ·A‚Ì‡‚ÉƒvƒbƒVƒ…‚³‚ê‚é)
+	//	æ­£å¼¦ã¨ä½™å¼¦(æ­£å¼¦ã€ä½™å¼¦ã€ã®é †ã«ãƒ—ãƒƒã‚·ãƒ¥ã•ã‚Œã‚‹)
 	//	Stk : 1 / 2 or 0 / 2
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opSinCos(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 2)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -587,9 +587,9 @@ namespace Script {
 		return None;
 	};
 
-	//	³Œ·‚Æ—]Œ·(—]Œ·A³Œ·A‚Ì‡‚ÉƒvƒbƒVƒ…‚³‚ê‚é)
+	//	æ­£å¼¦ã¨ä½™å¼¦(ä½™å¼¦ã€æ­£å¼¦ã€ã®é †ã«ãƒ—ãƒƒã‚·ãƒ¥ã•ã‚Œã‚‹)
 	//	Stk : 1 / 2 or 0 / 2
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opCosSin(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 2)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -598,54 +598,54 @@ namespace Script {
 		return None;
 	};
 
-	//	³Ú
+	//	æ­£æ¥
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opTan(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackPush(tan(f));
 		return None;
 	};
-	//	•ÎŠp
+	//	åè§’
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opArg(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackTop() = atan2(f, th.StackTop());
 		return None;
 	};
-	//	•½•ûª
+	//	å¹³æ–¹æ ¹
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opSqrt(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackPush(sqrt(f));
 		return None;
 	};
-	//	—İæ
+	//	ç´¯ä¹—
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opPow(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ == -1 ? 2 : 1, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackTop() = pow(th.StackTop(), f);
 		return None;
 	};
-	//	©‘R‘Î”
+	//	è‡ªç„¶å¯¾æ•°
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opLog(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
 		th.StackPush(log(f));
 		return None;
 	};
-	//	í—p‘Î”
+	//	å¸¸ç”¨å¯¾æ•°
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opLog10(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -653,9 +653,9 @@ namespace Script {
 		return None;
 	};
 
-	//	sqrt(a^2 + b^2 + ...)‚ğŒvZ‚·‚é
+	//	sqrt(a^2 + b^2 + ...)ã‚’è¨ˆç®—ã™ã‚‹
 	//	Stk : Opt / 1
-	//	Opt : ŸŒ³‚Ì”
+	//	Opt : æ¬¡å…ƒã®æ•°
 	ReturnState opLen(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_, 1)) return Error;
 		if (code.attr.int_ < 0) {
@@ -679,9 +679,9 @@ namespace Script {
 		return None;
 	};
 
-	//	“x”–@ -> ŒÊ“x–@
+	//	åº¦æ•°æ³• -> å¼§åº¦æ³•
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opD2r(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -689,9 +689,9 @@ namespace Script {
 		return None;
 	};
 
-	//	ŒÊ“x–@ -> “x”–@
+	//	å¼§åº¦æ³• -> åº¦æ•°æ³•
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opR2d(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -699,9 +699,9 @@ namespace Script {
 		return None;
 	};
 
-	//	â‘Î’l
+	//	çµ¶å¯¾å€¤
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opAbs(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -709,9 +709,9 @@ namespace Script {
 		return None;
 	};
 
-	//	lÌŒÜ“ü
+	//	å››æ¨äº”å…¥
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opRound(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -719,9 +719,9 @@ namespace Script {
 		return None;
 	};
 
-	//	ƒ[ƒ•ûŒüŠÛ‚ß
+	//	ã‚¼ãƒ­æ–¹å‘ä¸¸ã‚
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opTrunc(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -729,9 +729,9 @@ namespace Script {
 		return None;
 	};
 
-	//	³•ûŒüŠÛ‚ß
+	//	æ­£æ–¹å‘ä¸¸ã‚
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opCeil(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -739,9 +739,9 @@ namespace Script {
 		return None;
 	};
 
-	//	•‰•ûŒüŠÛ‚ß
+	//	è² æ–¹å‘ä¸¸ã‚
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : ®”-1,‚Ü‚½‚Í‘¦’l
+	//	Opt : æ•´æ•°-1,ã¾ãŸã¯å³å€¤
 	ReturnState opFloor(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 1 : 0, 1)) return Error;
 		float f = (code.attr.int_ == -1 ? th.StackPop() : code.attr.float_);
@@ -749,9 +749,9 @@ namespace Script {
 		return None;
 	};
 
-	//	®”ƒf[ƒ^‚ğ”’l‰»‚·‚é
+	//	æ•´æ•°ãƒ‡ãƒ¼ã‚¿ã‚’æ•°å€¤åŒ–ã™ã‚‹
 	//	Stk : 1 / 1
-	//	Opt : ”’l‰»‘O‚És‚í‚ê‚é‰EƒVƒtƒg—Ê(•‰‚Ì’l‚Ì‚ÍƒVƒtƒg‚È‚µ)
+	//	Opt : æ•°å€¤åŒ–å‰ã«è¡Œã‚ã‚Œã‚‹å³ã‚·ãƒ•ãƒˆé‡(è² ã®å€¤ã®æ™‚ã¯ã‚·ãƒ•ãƒˆãªã—)
 	ReturnState opI2n(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 1)) return Error;
 		int shift = (code.attr.int_ < 0 ? 0 : code.attr.int_);
@@ -759,27 +759,27 @@ namespace Script {
 		th.StackPush(static_cast<float>(i));
 		return None;
 	}
-	//	”’l‚ğ®”ƒf[ƒ^‚É‚·‚é(’[”‚ÍƒLƒƒƒXƒg‚É‚æ‚èŠÛ‚ß‚ç‚ê‚é)
+	//	æ•°å€¤ã‚’æ•´æ•°ãƒ‡ãƒ¼ã‚¿ã«ã™ã‚‹(ç«¯æ•°ã¯ã‚­ãƒ£ã‚¹ãƒˆã«ã‚ˆã‚Šä¸¸ã‚ã‚‰ã‚Œã‚‹)
 	//	Stk : 1 / 1
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opN2i(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 1)) return Error;
 		th.StackPush(static_cast<int32_t>(th.StackPop().float_));
 		return None;
 	}
-	//	®”’l‚ğƒvƒbƒVƒ…‚·‚é
+	//	æ•´æ•°å€¤ã‚’ãƒ—ãƒƒã‚·ãƒ¥ã™ã‚‹
 	//	Stk : 0 / 1
-	//	Opt : ƒvƒbƒVƒ…‚·‚é®”
+	//	Opt : ãƒ—ãƒƒã‚·ãƒ¥ã™ã‚‹æ•´æ•°
 	ReturnState opIPush(Thread& th, const Code& code) {
 		if (th.CheckStack(0, 1)) return Error;
 		th.StackPush(code.attr.int_);
 		return None;
 	}
-	//	®”’l‚ğ¶ƒVƒtƒg‚·‚é
+	//	æ•´æ•°å€¤ã‚’å·¦ã‚·ãƒ•ãƒˆã™ã‚‹
 	//	Stk : 1 / 1 or 0 / 1
-	//	Opt : •‰”(ƒXƒ^ƒbƒNƒgƒbƒv‚©‚ç”’l‚ğg—p)A‚Ü‚½‚ÍƒVƒtƒg—Ê
+	//	Opt : è² æ•°(ã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒƒãƒ—ã‹ã‚‰æ•°å€¤ã‚’ä½¿ç”¨)ã€ã¾ãŸã¯ã‚·ãƒ•ãƒˆé‡
 	//
-	//	Note: ƒXƒ^ƒbƒN‚©‚çæ‚èo‚·‚Ì‚Í”’l‚Å‚ ‚Á‚Ä®”‚Å‚Í‚È‚¢
+	//	Note: ã‚¹ã‚¿ãƒƒã‚¯ã‹ã‚‰å–ã‚Šå‡ºã™ã®ã¯æ•°å€¤ã§ã‚ã£ã¦æ•´æ•°ã§ã¯ãªã„
 	ReturnState opILsh(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 2 : 1, 1)) return Error;
 		int32_t sh = (code.attr.int_ < 0 ? (int32_t)th.StackPop().float_ : code.attr.int_);
@@ -790,11 +790,11 @@ namespace Script {
 		th.StackTop().int_ <<= sh;
 		return None;
 	}
-	//	®”’l‚ğZp‰EƒVƒtƒg‚·‚é
+	//	æ•´æ•°å€¤ã‚’ç®—è¡“å³ã‚·ãƒ•ãƒˆã™ã‚‹
 	//	Stk : 2 / 1 or 1 / 1
-	//	Opt : •‰”(ƒXƒ^ƒbƒNƒgƒbƒv‚©‚ç”’l‚ğg—p)A‚Ü‚½‚ÍƒVƒtƒg—Ê
+	//	Opt : è² æ•°(ã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒƒãƒ—ã‹ã‚‰æ•°å€¤ã‚’ä½¿ç”¨)ã€ã¾ãŸã¯ã‚·ãƒ•ãƒˆé‡
 	//
-	//	Note: ƒXƒ^ƒbƒN‚©‚çæ‚èo‚·‚Ì‚Í”’l‚Å‚ ‚Á‚Ä®”‚Å‚Í‚È‚¢
+	//	Note: ã‚¹ã‚¿ãƒƒã‚¯ã‹ã‚‰å–ã‚Šå‡ºã™ã®ã¯æ•°å€¤ã§ã‚ã£ã¦æ•´æ•°ã§ã¯ãªã„
 	ReturnState opIRsh(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_ < 0 ? 2 : 1, 1)) return Error;
 		int32_t sh = (code.attr.int_ < 0 ? (int32_t)th.StackPop().float_ : code.attr.int_);
@@ -805,36 +805,36 @@ namespace Script {
 		th.StackTop().int_ >>= sh;
 		return None;
 	}
-	//	®”’l‚Ìƒrƒbƒg˜_—Ï
+	//	æ•´æ•°å€¤ã®ãƒ“ãƒƒãƒˆè«–ç†ç©
 	//	Stk : 2 / 1
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opIAnd(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 1)) return Error;
 		auto right = th.StackPop().int_;
 		th.StackTop().int_ &= right;
 		return None;
 	}
-	//	®”’l‚Ìƒrƒbƒg˜_—˜a
+	//	æ•´æ•°å€¤ã®ãƒ“ãƒƒãƒˆè«–ç†å’Œ
 	//	Stk : 2 / 1
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opIOr(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 1)) return Error;
 		auto right = th.StackPop().int_;
 		th.StackTop().int_ |= right;
 		return None;
 	}
-	//	®”’l‚Ìƒrƒbƒg”½“]
+	//	æ•´æ•°å€¤ã®ãƒ“ãƒƒãƒˆåè»¢
 	//	Stk : 2 / 1
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opIXor(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 1)) return Error;
 		auto right = th.StackPop().int_;
 		th.StackTop().int_ |= right;
 		return None;
 	}
-	//	®”’l‚ğ1.0‚Ü‚½‚Í0.0‚É•ÏŠ·
+	//	æ•´æ•°å€¤ã‚’1.0ã¾ãŸã¯0.0ã«å¤‰æ›
 	//	Stk : 1 / 1
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opIBool(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 1)) return Error;
 		th.StackTop().float_ = (float)(!!th.StackTop().int_);
@@ -842,25 +842,25 @@ namespace Script {
 	}
 
 	
-	//	•Ï”“Ç‚İo‚µ(’è”ƒAƒhƒŒƒX)
+	//	å¤‰æ•°èª­ã¿å‡ºã—(å®šæ•°ã‚¢ãƒ‰ãƒ¬ã‚¹)
 	//	Stk : 0 / 1
-	//	Opt : •Ï””Ô’n
+	//	Opt : å¤‰æ•°ç•ªåœ°
 	ReturnState opLod(Thread& th, const Code& code) {
 		if (th.CheckStack(0, 1)) return Error;
 		th.StackPush(th.GetState()->At(code.attr.int_));
 		return None;
 	};
-	//	•Ï”‘‚«‚İ(’è”ƒAƒhƒŒƒX)
+	//	å¤‰æ•°æ›¸ãè¾¼ã¿(å®šæ•°ã‚¢ãƒ‰ãƒ¬ã‚¹)
 	//	Stk : 1 / 0
-	//	Opt : •Ï””Ô’n
+	//	Opt : å¤‰æ•°ç•ªåœ°
 	ReturnState opSto(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		th.GetState()->At(code.attr.int_) = th.StackPop();
 		return None;
 	};
-	//	•Ï”“Ç‚İ‚İ(‰Â•ÏƒAƒhƒŒƒX)
+	//	å¤‰æ•°èª­ã¿è¾¼ã¿(å¯å¤‰ã‚¢ãƒ‰ãƒ¬ã‚¹)
 	//	Stk : 1 / 1
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opVlod(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 1)) return Error;
 		auto index = (unsigned int)th.StackTop().float_;
@@ -873,9 +873,9 @@ namespace Script {
 
 		return None;
 	};
-	//	•Ï”‘‚«‚İ(‰Â•ÏƒAƒhƒŒƒX)
+	//	å¤‰æ•°æ›¸ãè¾¼ã¿(å¯å¤‰ã‚¢ãƒ‰ãƒ¬ã‚¹)
 	//	Stk : 2 / 0
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opVsto(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		auto index = (unsigned int)th.StackPop().float_;
@@ -888,14 +888,14 @@ namespace Script {
 
 		return None;
 	};
-	//	“Áê’lƒvƒbƒVƒ…
+	//	ç‰¹æ®Šå€¤ãƒ—ãƒƒã‚·ãƒ¥
 	//	Stk : 0 / 1
-	//	Opt : Ï‚Ş’l‚Ìí—Ş
+	//	Opt : ç©ã‚€å€¤ã®ç¨®é¡
 	//			 0 : 0
 	//			 2 : 1
 	//			 4 : -1
-	//			 6 : –³ŒÀ+
-	//			 8 :  V -
+	//			 6 : ç„¡é™+
+	//			 8 :  ã€ƒ -
 	//			10 : NaN
 	ReturnState opSpps(Thread& th, const Code& code) {
 		if (th.CheckStack(0, 1)) return Error;
@@ -920,7 +920,7 @@ namespace Script {
 			case NumTypeAttribute::NegInf:
 				val = -1e18f;
 				break;
-			default: // ”Û’èƒrƒbƒg•t‚«‚Ìê‡‚à‚±‚±‚É—¬‚ê‚é
+			default: // å¦å®šãƒ“ãƒƒãƒˆä»˜ãã®å ´åˆã‚‚ã“ã“ã«æµã‚Œã‚‹
 				th.SetErrorCode(InvalidOpcode);
 				return Error;
 		};
@@ -928,9 +928,9 @@ namespace Script {
 
 		return None;
 	};
-	//	ƒXƒ^ƒbƒNƒgƒbƒv•¡»
+	//	ã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒƒãƒ—è¤‡è£½
 	//	Stk : 1 / Opt + 1
-	//	Opt : •¡»‚·‚é”(0ˆÈ‰º‚Í1‚É•â³)
+	//	Opt : è¤‡è£½ã™ã‚‹æ•°(0ä»¥ä¸‹ã¯1ã«è£œæ­£)
 	ReturnState opDup(Thread& th, const Code& code) {
 		if (th.CheckStack(1, code.attr.int_ + 1)) return Error;
 		int count = code.attr.int_;
@@ -941,10 +941,10 @@ namespace Script {
 		return None;
 	};
 
-	//	ƒXƒ^ƒbƒN“àw’èˆÊ’u—v‘f‚Ì•¡»
+	//	ã‚¹ã‚¿ãƒƒã‚¯å†…æŒ‡å®šä½ç½®è¦ç´ ã®è¤‡è£½
 	//	Stk : 0 / 1
-	//	Opt : ƒXƒ^ƒbƒNƒx[ƒX‚©‚ç‚ÌƒIƒtƒZƒbƒg
-	//        ƒ}ƒCƒiƒX‚Ì‚Íƒgƒbƒv‚©‚ç‚Ì‘Š‘ÎˆÊ’u(-1‚ªƒXƒ^ƒbƒNƒgƒbƒv)
+	//	Opt : ã‚¹ã‚¿ãƒƒã‚¯ãƒ™ãƒ¼ã‚¹ã‹ã‚‰ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆ
+	//        ãƒã‚¤ãƒŠã‚¹ã®æ™‚ã¯ãƒˆãƒƒãƒ—ã‹ã‚‰ã®ç›¸å¯¾ä½ç½®(-1ãŒã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒƒãƒ—)
 	ReturnState opSLod(Thread& th, const Code& code) {
 		int index = code.attr.int_;
 		if (index < 0) index += th.StackSize();
@@ -958,13 +958,13 @@ namespace Script {
 		return None;
 	};
 
-	//	ƒXƒ^ƒbƒN“àw’èˆÊ’u—v‘f‚Ö‚Ì‘ã“ü
+	//	ã‚¹ã‚¿ãƒƒã‚¯å†…æŒ‡å®šä½ç½®è¦ç´ ã¸ã®ä»£å…¥
 	//	Stk : 1 / 0
-	//	Opt : ƒXƒ^ƒbƒNƒx[ƒX‚©‚ç‚ÌƒIƒtƒZƒbƒg
-	//        ƒ}ƒCƒiƒX‚Ì‚Íƒgƒbƒv‚©‚ç‚Ì‘Š‘ÎˆÊ’u(-1‚ªƒXƒ^ƒbƒNƒgƒbƒv)
+	//	Opt : ã‚¹ã‚¿ãƒƒã‚¯ãƒ™ãƒ¼ã‚¹ã‹ã‚‰ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆ
+	//        ãƒã‚¤ãƒŠã‚¹ã®æ™‚ã¯ãƒˆãƒƒãƒ—ã‹ã‚‰ã®ç›¸å¯¾ä½ç½®(-1ãŒã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒƒãƒ—)
 	ReturnState opSSto(Thread& th, const Code& code) {
 		int index = code.attr.int_;
-		// æ“ª—v‘f‚Íİ’è‚·‚é’l‚É‚È‚é‚½‚ß1ˆø‚¢‚ÄŒvZ‚·‚é
+		// å…ˆé ­è¦ç´ ã¯è¨­å®šã™ã‚‹å€¤ã«ãªã‚‹ãŸã‚1å¼•ã„ã¦è¨ˆç®—ã™ã‚‹
 		if (index < 0) index += (th.StackSize() - 1);
 		if (index < 0) {
 			th.SetErrorCode(InvalidOpcode);
@@ -977,33 +977,33 @@ namespace Script {
 		return None;
 	};
 
-	//	ƒXƒ^ƒbƒNƒgƒbƒvíœ
+	//	ã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒƒãƒ—å‰Šé™¤
 	//	Stk : Opt / 0
-	//	Opt : íœ‚·‚é—v‘f”(0ˆÈ‰º‚Í1‚É•â³)
+	//	Opt : å‰Šé™¤ã™ã‚‹è¦ç´ æ•°(0ä»¥ä¸‹ã¯1ã«è£œæ­£)
 	ReturnState opDel(Thread& th, const Code& code) {
 		auto n = code.attr.int_ < 0 ? 1 : code.attr.int_;
 		if (th.CheckStack(n, 0)) return Error;
 		th.StackPop(n);
 		return None;
 	};
-	//	ƒXƒ^ƒbƒNƒNƒŠƒA
+	//	ã‚¹ã‚¿ãƒƒã‚¯ã‚¯ãƒªã‚¢
 	//	Stk : All / 0
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opCls(Thread& th, const Code& code) {
 		th.ClearStack();
 		return None;
 	};
-	//	ƒTƒuƒ‹[ƒ`ƒ“ƒWƒƒƒ“ƒv
+	//	ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³ã‚¸ãƒ£ãƒ³ãƒ—
 	//	Stk : 0 / 0
-	//	Opt : ƒWƒƒƒ“ƒvæƒAƒhƒŒƒX
+	//	Opt : ã‚¸ãƒ£ãƒ³ãƒ—å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹
 	ReturnState opCall(Thread& th, const Code& code) {
 		if (auto ret = th.GoSub(code.attr.ep_)) return ret;
 
 		return None;
 	};
-	//	ƒŠƒ^[ƒ“
+	//	ãƒªã‚¿ãƒ¼ãƒ³
 	//	Stk : 0 / 0
-	//	Opt : –¢g—p
+	//	Opt : æœªä½¿ç”¨
 	ReturnState opRet(Thread& th, const Code& code) {
 		if (auto ret = th.ReturnSub()) return ret;
 
@@ -1022,10 +1022,10 @@ namespace Script {
 		return None;
 	}
 
-	// ’è”ƒAƒhƒŒƒX•Ï”ŠÔ‚Ì’¼Ú‰ÁZ
+	// å®šæ•°ã‚¢ãƒ‰ãƒ¬ã‚¹å¤‰æ•°é–“ã®ç›´æ¥åŠ ç®—
 	//	Stk : 0 / 0
-	//	Opt : Opt[0-3] ‰ÁZæƒAƒhƒŒƒX(0 - 255)
-	//        Opt[4-7] ‰ÁZ‚·‚é’l‚ÌƒAƒhƒŒƒX(0-255)
+	//	Opt : Opt[0-3] åŠ ç®—å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹(0 - 255)
+	//        Opt[4-7] åŠ ç®—ã™ã‚‹å€¤ã®ã‚¢ãƒ‰ãƒ¬ã‚¹(0-255)
 	ReturnState opNsAdd(Thread& th, const Code& code) {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
@@ -1037,10 +1037,10 @@ namespace Script {
 		return None;
 	}
 
-	// ’è”ƒAƒhƒŒƒX•Ï”ŠÔ‚Ì’¼ÚŒ¸Z
+	// å®šæ•°ã‚¢ãƒ‰ãƒ¬ã‚¹å¤‰æ•°é–“ã®ç›´æ¥æ¸›ç®—
 	//	Stk : 0 / 0
-	//	Opt : Opt[0-3] Œ¸ZæƒAƒhƒŒƒX(0 - 255)
-	//        Opt[4-7] Œ¸Z‚·‚é’l‚ÌƒAƒhƒŒƒX(0-255)
+	//	Opt : Opt[0-3] æ¸›ç®—å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹(0 - 255)
+	//        Opt[4-7] æ¸›ç®—ã™ã‚‹å€¤ã®ã‚¢ãƒ‰ãƒ¬ã‚¹(0-255)
 	ReturnState opNsSub(Thread& th, const Code& code) {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
@@ -1052,10 +1052,10 @@ namespace Script {
 		return None;
 	}
 
-	// ’è”ƒAƒhƒŒƒX•Ï”ŠÔ‚Ì’¼ÚæZ
+	// å®šæ•°ã‚¢ãƒ‰ãƒ¬ã‚¹å¤‰æ•°é–“ã®ç›´æ¥ä¹—ç®—
 	//	Stk : 0 / 0
-	//	Opt : Opt[0-3] æZæƒAƒhƒŒƒX(0 - 255)
-	//        Opt[4-7] æZ‚·‚é’l‚ÌƒAƒhƒŒƒX(0-255)
+	//	Opt : Opt[0-3] ä¹—ç®—å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹(0 - 255)
+	//        Opt[4-7] ä¹—ç®—ã™ã‚‹å€¤ã®ã‚¢ãƒ‰ãƒ¬ã‚¹(0-255)
 	ReturnState opNsMul(Thread& th, const Code& code) {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
@@ -1067,10 +1067,10 @@ namespace Script {
 		return None;
 	}
 
-	// ’è”ƒAƒhƒŒƒX•Ï”ŠÔ‚Ì’¼ÚœZ
+	// å®šæ•°ã‚¢ãƒ‰ãƒ¬ã‚¹å¤‰æ•°é–“ã®ç›´æ¥é™¤ç®—
 	//	Stk : 0 / 0
-	//	Opt : Opt[0-3] œZæƒAƒhƒŒƒX(0 - 255)
-	//        Opt[4-7] œZ‚·‚é’l‚ÌƒAƒhƒŒƒX(0-255)
+	//	Opt : Opt[0-3] é™¤ç®—å…ˆã‚¢ãƒ‰ãƒ¬ã‚¹(0 - 255)
+	//        Opt[4-7] é™¤ç®—ã™ã‚‹å€¤ã®ã‚¢ãƒ‰ãƒ¬ã‚¹(0-255)
 	ReturnState opNsDiv(Thread& th, const Code& code) {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;

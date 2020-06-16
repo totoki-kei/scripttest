@@ -10,20 +10,20 @@
 
 namespace Script {
 
-	/// <summary>Code‚ÌÀsŒ‹‰Ê‚ğ•\‚·—ñ‹“‘Î</summary>
+	/// <summary>Codeã®å®Ÿè¡Œçµæœã‚’è¡¨ã™åˆ—æŒ™å¯¾</summary>
 	enum ReturnState {
-		/// <summary>³í‚ÉŠ®—¹</summary>
+		/// <summary>æ­£å¸¸ã«å®Œäº†</summary>
 		None = 0,
-		/// <summary>ƒXƒNƒŠƒvƒg‚ğ’†’f‚·‚é</summary>
+		/// <summary>ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚’ä¸­æ–­ã™ã‚‹</summary>
 		Wait,
-		/// <summary>ƒGƒ‰[‚ª”­¶‚µ‚½</summary>
-		/// <remark>‚±‚ê‚ğ•Ô‚·ê‡‚ÍAThread‚ÌerrorCodeƒƒ“ƒo‚ÉƒGƒ‰[——R‚ğŠi”[‚·‚é‚±‚ÆB</remark>
+		/// <summary>ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ãŸ</summary>
+		/// <remark>ã“ã‚Œã‚’è¿”ã™å ´åˆã¯ã€Threadã®errorCodeãƒ¡ãƒ³ãƒã«ã‚¨ãƒ©ãƒ¼ç†ç”±ã‚’æ ¼ç´ã™ã‚‹ã“ã¨ã€‚</remark>
 		Error,
-		/// <summary>ƒXƒNƒŠƒvƒg‚ªI—¹‚µ‚½</summary>
+		/// <summary>ã‚¹ã‚¯ãƒªãƒ—ãƒˆãŒçµ‚äº†ã—ãŸ</summary>
 		Finished,
 	};
 
-	/// <summary>ƒXƒNƒŠƒvƒgƒGƒ‰[‚Ìî•ñ</summary>
+	/// <summary>ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚¨ãƒ©ãƒ¼ã®æƒ…å ±</summary>
 	enum ErrorType {
 		OK = 0,
 		FileCannotOpen = 0x10,
@@ -86,7 +86,7 @@ namespace Script {
 	class State;
 	class Thread;
 
-	/// <summary>ƒ[ƒNƒXƒ^ƒbƒN‚Æƒ[ƒNƒGƒŠƒA‚ÉŠi”[‚³‚ê‚é’l‚Ì’PˆÊB’P¸“x•‚“®¬”“_”‚Æ•„†•t‚«32ƒrƒbƒg®”AŒ^–³‚µƒ|ƒCƒ“ƒ^‚Ì‹¤—p‘ÌB</summary>
+	/// <summary>ãƒ¯ãƒ¼ã‚¯ã‚¹ã‚¿ãƒƒã‚¯ã¨ãƒ¯ãƒ¼ã‚¯ã‚¨ãƒªã‚¢ã«æ ¼ç´ã•ã‚Œã‚‹å€¤ã®å˜ä½ã€‚å˜ç²¾åº¦æµ®å‹•å°æ•°ç‚¹æ•°ã¨ç¬¦å·ä»˜ã32ãƒ“ãƒƒãƒˆæ•´æ•°ã€å‹ç„¡ã—ãƒã‚¤ãƒ³ã‚¿ã®å…±ç”¨ä½“ã€‚</summary>
 	union Value {
 		float float_;
 		int32_t int_;
@@ -102,10 +102,10 @@ namespace Script {
 		operator void*&() { return ptr_; }
 	};
 
-	/// <summary>ƒXƒNƒŠƒvƒg‚Ìˆ—‚Ìˆê’PˆÊB</summary>
+	/// <summary>ã‚¹ã‚¯ãƒªãƒ—ãƒˆã®å‡¦ç†ã®ä¸€å˜ä½ã€‚</summary>
 	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
 
-	/// <summary>Às‚ÌÅ¬’PˆÊBÀˆ—‚ğs‚¤Opcode‚Æ’Ç‰Á‚ÌƒIƒvƒVƒ‡ƒ“’l‚©‚ç‚È‚éB‰Šú‰»‚É‰½‚àƒIƒvƒVƒ‡ƒ“‚ğw’è‚µ‚È‚©‚Á‚½ê‡A®”-1‚ªİ’è‚³‚ê‚éB</summary>
+	/// <summary>å®Ÿè¡Œã®æœ€å°å˜ä½ã€‚å®Ÿå‡¦ç†ã‚’è¡Œã†Opcodeã¨è¿½åŠ ã®ã‚ªãƒ—ã‚·ãƒ§ãƒ³å€¤ã‹ã‚‰ãªã‚‹ã€‚åˆæœŸåŒ–æ™‚ã«ä½•ã‚‚ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚’æŒ‡å®šã—ãªã‹ã£ãŸå ´åˆã€æ•´æ•°-1ãŒè¨­å®šã•ã‚Œã‚‹ã€‚</summary>
 	struct Code {
 		Opcode opcode;
 
@@ -139,26 +139,26 @@ namespace Script {
 		Code(Fn f, Attr a) : opcode{ f }, attr{ a } {}
 	};
 
-	/// <summary>ˆê˜A‚ÌƒR[ƒhŒQ‚ğ’ñ‹Ÿ‚·‚éƒNƒ‰ƒX</summary>
+	/// <summary>ä¸€é€£ã®ã‚³ãƒ¼ãƒ‰ç¾¤ã‚’æä¾›ã™ã‚‹ã‚¯ãƒ©ã‚¹</summary>
 	class CodeProvider : public std::enable_shared_from_this<CodeProvider> {
 	public:
-		/// <summary>ƒ|ƒCƒ“ƒ^Œ^(shared_ptr)</summary>
+		/// <summary>ãƒã‚¤ãƒ³ã‚¿å‹(shared_ptr)</summary>
 		typedef std::shared_ptr<CodeProvider> Ptr;
 
-		/// <summary>w’èƒCƒ“ƒfƒbƒNƒX‚ÌCode‚ğ“¾‚é</summary>
+		/// <summary>æŒ‡å®šã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã®Codeã‚’å¾—ã‚‹</summary>
 		virtual const Code& Get(int index) = 0;
-		/// <summary>ƒR[ƒhŒQ‚ÌƒTƒCƒY‚ğ“¾‚éB</summary>
+		/// <summary>ã‚³ãƒ¼ãƒ‰ç¾¤ã®ã‚µã‚¤ã‚ºã‚’å¾—ã‚‹ã€‚</summary>
 		virtual int Length() = 0;
-		/// <summary>w’è‚³‚ê‚½–¼Ì‚ÉŠÖ˜A•t‚¯‚ç‚ê‚½ƒR[ƒhƒCƒ“ƒfƒbƒNƒX‚ğ“¾‚éB‘¶İ‚µ‚È‚¢ê‡‚Í-1‚ğ•Ô‚·B</summary>
+		/// <summary>æŒ‡å®šã•ã‚ŒãŸåç§°ã«é–¢é€£ä»˜ã‘ã‚‰ã‚ŒãŸã‚³ãƒ¼ãƒ‰ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’å¾—ã‚‹ã€‚å­˜åœ¨ã—ãªã„å ´åˆã¯-1ã‚’è¿”ã™ã€‚</summary>
 		virtual int Label(const char* name) = 0;
-		/// <summary>•¶š—ñƒe[ƒuƒ‹‚©‚ç•¶š—ñ‚ğ“¾‚éB‘¶İ‚µ‚È‚¢ID‚Ìê‡‚Ínullptr‚ğ•Ô‚·B</summary>
+		/// <summary>æ–‡å­—åˆ—ãƒ†ãƒ¼ãƒ–ãƒ«ã‹ã‚‰æ–‡å­—åˆ—ã‚’å¾—ã‚‹ã€‚å­˜åœ¨ã—ãªã„IDã®å ´åˆã¯nullptrã‚’è¿”ã™ã€‚</summary>
 		virtual const char* GetString(int id) = 0;
 
-		/// <summary>State‚ğì¬‚·‚é</summary>
+		/// <summary>Stateã‚’ä½œæˆã™ã‚‹</summary>
 		virtual std::shared_ptr<State> CreateState();
 	};
 
-	/// <summary>Às’†‚ÌƒOƒ[ƒoƒ‹‚Èî•ñ‚ğŠi”[‚·‚éƒNƒ‰ƒX</summary>
+	/// <summary>å®Ÿè¡Œä¸­ã®ã‚°ãƒ­ãƒ¼ãƒãƒ«ãªæƒ…å ±ã‚’æ ¼ç´ã™ã‚‹ã‚¯ãƒ©ã‚¹</summary>
 	class State : public std::enable_shared_from_this<State> {
 	public:
 		typedef std::shared_ptr<State> Ptr;
@@ -171,9 +171,9 @@ namespace Script {
 	public:
 		State(std::shared_ptr<CodeProvider>);
 
-		/// <summary>w’è‚ÌƒR[ƒhƒCƒ“ƒfƒbƒNƒX‚©‚çŠJn‚·‚éƒXƒŒƒbƒh‚ğì¬‚·‚éB–¢w’è‚Ìê‡‚ÍƒCƒ“ƒfƒbƒNƒX0”Ô‚©‚çŠJn‚·‚éB</summary>
+		/// <summary>æŒ‡å®šã®ã‚³ãƒ¼ãƒ‰ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‹ã‚‰é–‹å§‹ã™ã‚‹ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆã™ã‚‹ã€‚æœªæŒ‡å®šã®å ´åˆã¯ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹0ç•ªã‹ã‚‰é–‹å§‹ã™ã‚‹ã€‚</summary>
 		std::shared_ptr<Thread> CreateThread(int entryPoint = 0);
-		/// <summary>w’è–¼Ì‚ÌƒR[ƒhƒCƒ“ƒfƒbƒNƒX‚©‚çŠJn‚·‚éƒXƒŒƒbƒh‚ğì¬‚·‚éB</summary>
+		/// <summary>æŒ‡å®šåç§°ã®ã‚³ãƒ¼ãƒ‰ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‹ã‚‰é–‹å§‹ã™ã‚‹ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆã™ã‚‹ã€‚</summary>
 		std::shared_ptr<Thread> CreateThread(const char* entryPoint);
 
 		CodeProvider* GetCodeProvider() { return provider.get(); }
@@ -190,7 +190,7 @@ namespace Script {
 		void SetRegistry(void* ptr) { registry = ptr; }
 
 
-		/// <summary>ƒ[ƒNƒGƒŠƒA‚ğ®”’l0‚Å‰Šú‰»‚·‚éB</summary>
+		/// <summary>ãƒ¯ãƒ¼ã‚¯ã‚¨ãƒªã‚¢ã‚’æ•´æ•°å€¤0ã§åˆæœŸåŒ–ã™ã‚‹ã€‚</summary>
 		void Reset();
 	};
 
@@ -225,9 +225,9 @@ namespace Script {
 		ErrorType GetErrorCode() { return errorCode; }
 		void SetErrorCode(ErrorType e) { errorCode = e; }
 
-		/// <summary>ƒXƒNƒŠƒvƒg‚ğÀs‚·‚éBnowait‚ğw’è‚·‚é‚ÆReturnState::Wait‚Å’†’f‚³‚ê‚È‚­‚È‚éB</summary>
+		/// <summary>ã‚¹ã‚¯ãƒªãƒ—ãƒˆã‚’å®Ÿè¡Œã™ã‚‹ã€‚nowaitã‚’æŒ‡å®šã™ã‚‹ã¨ReturnState::Waitã§ä¸­æ–­ã•ã‚Œãªããªã‚‹ã€‚</summary>
 		ReturnState Run(bool nowait = false);
-		/// <summary>ƒXƒŒƒbƒh‚ÌƒXƒ^ƒbƒN“™‚ğŠ®‘S‚Éíœ‚µAw’è‚³‚ê‚½ƒR[ƒhƒCƒ“ƒfƒbƒNƒX‚©‚çÀs‚·‚é‚æ‚¤‚Éİ’è‚·‚éB–¢w’è‚Ìê‡‚ÍƒCƒ“ƒfƒbƒNƒX0”Ô‚©‚çŠJn‚·‚éB</summary>
+		/// <summary>ã‚¹ãƒ¬ãƒƒãƒ‰ã®ã‚¹ã‚¿ãƒƒã‚¯ç­‰ã‚’å®Œå…¨ã«å‰Šé™¤ã—ã€æŒ‡å®šã•ã‚ŒãŸã‚³ãƒ¼ãƒ‰ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‹ã‚‰å®Ÿè¡Œã™ã‚‹ã‚ˆã†ã«è¨­å®šã™ã‚‹ã€‚æœªæŒ‡å®šã®å ´åˆã¯ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹0ç•ªã‹ã‚‰é–‹å§‹ã™ã‚‹ã€‚</summary>
 		void Reset(int ep = 0);
 
 		ReturnState CheckStack(unsigned int pop, unsigned int push);
