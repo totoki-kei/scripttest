@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Scrip">
+      <UniqueIdentifier>{c1b16ea7-ee60-4d74-bea6-c18a5ca5f5f0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ScripTest.cpp" />
+    <ClCompile Include="Scrip.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Lambs.hpp" />
+    <ClInclude Include="ScripParser.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="Scrip.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ScripParser.cpg">
+      <Filter>Scrip</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ScripLexer.h">
+      <Filter>Scrip</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
