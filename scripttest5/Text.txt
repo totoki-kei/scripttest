@@ -1,0 +1,150 @@
+
+----
+types
+----
+
+number
+	floating point number. 32bit.
+
+integer 
+	specialized number value. bit operation available.
+
+string
+	mutable array of character.
+	
+arraylist
+	variable length array.
+
+function
+	callable one. element of thread and object.
+
+thread
+	microthread.
+
+object
+	table-like object
+
+void
+	void type, value named "null" is unique member of this type.
+
+
+----
+variable(statement)
+----
+
+variable type is 
+
+var <name>;
+var <name> = <rvalue>;
+	local variable
+
+var $<name>;
+var $<name> = <rvalue>;
+	if variable name starts with dollar character($), 
+	the variable is exported as object member.
+
+
+----
+function definition
+----
+
+func (args...) { <statements> }
+	returns func.
+	To create standard function, assign this value to any variable.
+
+
+----
+special operator
+----
+
+thread <func>
+thread {<statements>}
+	returns thread
+
+new <func>(args...)
+new {<statements>}
+	returns object
+	yield statement in func/statements is ignored.
+
+[ <value list> ]
+	returns arraylist contains value list
+	ex.
+		[1, 2, 3]
+
+----
+object member
+----
+
+<arraylist>[<number>]
+	returns arraylist's member. if out of range, returns null.
+	(assignable)
+
+<arraylist>.count
+	returns itemcount
+
+<arraylist>.insert(<value1>, <value2>)
+	insert value2 between value1 and value1+1
+	and returns arraylist itself
+
+<arraylist>.remove(<value>)
+	remove value-th index and value, and close
+	and returns arraylist itself
+	
+<arraylist>.find(<value>)
+	returns index which value is contained.
+	if not contained, returns null.
+
+<arraylist>.push(<value>)
+	same "<arraylist>.insert(<arraylist>.count, <value>)"
+
+<arraylist>.pop()
+	same following code:
+		func(a) {
+			if (a.count == 0) { return null; }
+			var ret = a<a.count-1>;
+			a.remove(a.count - 1);
+			return ret;
+		}(<arraylist>);
+
+
+<string>.length
+	returns length of the string
+
+<string>[<index>]
+	n-th character code as integer
+	(unassignable)
+
+
+<thread>(args...)
+	returns value which "yield" returns
+	args... are passed to function
+	(argument variable in function is changed call by call.)
+
+<thread>.live
+	returns 1 if thread lives, 0 otherwise
+
+<thread>.result
+	returns value which last "yield" returns, or
+	"return"ed value
+	if any value was "yield"ed or "return"ed, returns null.
+
+
+<object>.<name>
+	access exported field of object.
+
+<object>[<string>]
+	access exported field named <string> (if exiets). or return null.
+	
+<object>(args...)
+	access fieldname "$call" value, and call as func
+	same as
+		obj.call(call, args...)
+
+<object>._fields
+	returns all field names in object as arraylist
+
+<object>._ctor
+	constractor function of this object.
+
+
+

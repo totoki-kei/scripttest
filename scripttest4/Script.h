@@ -1,57 +1,9 @@
 #pragma once
 
-/*
-
-class Nil;
-class Error;
-class Integer;
-class Number;
-class String;
-class Array;
-class Object;
-class NativePtr;
-
-using Value = boost::variant <Nil, Error, Number, String, Array, Object, NativePtr>;
-
-*/
-
 #include "ScriptTypes.h"
-
-#include <boost/variant/multivisitors.hpp>
 
 namespace Script {
 
-	namespace Visitors {
-
-		struct BinAdd;
-		struct BinSub;
-		struct BinMul;
-		struct BinDiv;
-		struct BinEquals;
-		struct BinNotEquals;
-		struct BinLessThan;
-		struct BinLessEqual;
-		struct BinGreaterThan;
-		struct BinGreaterEqual;
-		struct BinAnd;
-		struct BinOr;
-		struct BinBitAnd;
-		struct BinBitOr;
-		struct BinBitXor;
-		struct BinIndex;
-
-		struct UniBool; // operator bool => Integer
-		struct UniNeg;
-		struct UniNot;
-		struct UniLen;
-		struct UniTypeIndex;
-		struct UniTypeName;
-
-		struct UniStr;
-		struct UniNum;
-
-		struct Prop;
-	}
 }
 
 namespace Script {
