@@ -4,10 +4,10 @@
 #include <unordered_map>
 #include <fstream>
 
-
 #include <boost/spirit/include/qi.hpp>
 #include <boost/phoenix.hpp>
 #include <boost/fusion/tuple.hpp>
+#include <string>
 
 namespace Script { namespace Loader {
 	

@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 				//std::cout << "-------- Wait --------" << std::endl;
 				break;
 			case S::Error:
-				std::cout << "======== Error (code = " << th->GetErrorCode() << ") ========" << std::endl;
+				std::cout << "======== Error (code = " << (int)th->GetErrorCode() << ") ========" << std::endl;
 				break;
 			case S::Finished:
 				std::cout << "-------- Finished --------" << std::endl;

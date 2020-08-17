@@ -24,7 +24,7 @@ namespace Script {
 	};
 
 	/// <summary>スクリプトエラーの情報</summary>
-	enum ErrorType {
+	enum class ErrorType {
 		OK = 0,
 		FileCannotOpen = 0x10,
 		FileCannotRead,

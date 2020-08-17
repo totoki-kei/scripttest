@@ -2,13 +2,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdexcept>
 
 namespace Script {
+
+#pragma region CodeProvider
 
 	std::shared_ptr<State> CodeProvider::CreateState() {
 		return std::make_shared<State>(shared_from_this());
 	}
 
+#pragma endregion
+
+#pragma region State
 	State::State(std::shared_ptr<CodeProvider> p)
 		: provider{ p }
 		, workarea((size_t)8)
@@ -25,16 +31,18 @@ namespace Script {
 	void State::Reset() {
 		workarea.clear();
 	}
+#pragma endregion
 
+#pragma region Thread
 	Thread::Thread(std::shared_ptr<State> s, int ent)
 		: state{ s }
 		, codeindex{ ent }
 		, waitcount{ 0 }
-		, errorCode{ OK }
+		, errorCode{ ErrorType::OK }
 		, stackBase{ 0 } {}
 
 	ReturnState Thread::Run(bool nowait) {
-		if (errorCode)
+		if (errorCode != ErrorType::OK)
 			return Error;
 
 		if (waitcount) {
@@ -91,7 +99,7 @@ namespace Script {
 
 	Value& Thread::StackTop() {
 		if (workstack.size() <= stackBase) {
-			this->SetErrorCode(WorkstackUnderflow);
+			this->SetErrorCode(ErrorType::WorkstackUnderflow);
 
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Stack underflow." };
@@ -101,13 +109,13 @@ namespace Script {
 
 	Value& Thread::StackAt(int index) {
 		if (workstack.size() <= stackBase) {
-			this->SetErrorCode(WorkstackUnderflow);
+			this->SetErrorCode(ErrorType::WorkstackUnderflow);
 
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Stack underflow." };
 		}
 		if (workstack.size() - stackBase < index) {
-			this->SetErrorCode(InvalidOpcode);
+			this->SetErrorCode(ErrorType::InvalidOpcode);
 
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Invalid stack index." };
@@ -126,7 +134,7 @@ namespace Script {
 
 	ReturnState Thread::CheckStack(unsigned int pop, unsigned int /* push ( unused ) */) {
 		if (StackSize() < pop) {
-			SetErrorCode(WorkstackUnderflow);
+			SetErrorCode(ErrorType::WorkstackUnderflow);
 			return Error;
 		}
 		//int requiredSize = (int)state->workstack.size() - (int)pop + (int)push;
@@ -146,7 +154,7 @@ namespace Script {
 
 	ReturnState Thread::FramePop(int n) {
 		if (stackBase == 0) {
-			this->SetErrorCode(WorkstackUnderflow);
+			this->SetErrorCode(ErrorType::WorkstackUnderflow);
 			return Error;
 		}
 		if (CheckStack(n, 0)) return Error;
@@ -160,7 +168,7 @@ namespace Script {
 
 	ReturnState Thread::GoSub(int addr) {
 		if (addr < 0 || GetCodeProvider()->Length() <= addr) {
-			SetErrorCode(CodeindexOutOfRange);
+			SetErrorCode(ErrorType::CodeindexOutOfRange);
 			return Error;
 		}
 
@@ -171,7 +179,7 @@ namespace Script {
 
 	ReturnState Thread::ReturnSub() {
 		if (callstack.size() == 0) {
-			SetErrorCode(ScriptHasFinished);
+			SetErrorCode(ErrorType::ScriptHasFinished);
 			return Finished;
 		}
 		SetCodeIndex(callstack.back());
@@ -180,6 +188,6 @@ namespace Script {
 		return None;
 	}
 
-
+#pragma endregion
 
 }

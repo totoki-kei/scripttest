@@ -108,7 +108,7 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : 未使用
 	ReturnState opNull(Thread& th, const Code& code) {
-		th.SetErrorCode(InvalidOpcode);
+		th.SetErrorCode(ErrorType::InvalidOpcode);
 		return Error;
 	};
 	//	中断
@@ -122,7 +122,7 @@ namespace Script {
 	//	Stk : # / #
 	//	Opt : 未使用
 	ReturnState opEnd(Thread& th, const Code& code) {
-		th.SetErrorCode(ScriptHasFinished);
+		th.SetErrorCode(ErrorType::ScriptHasFinished);
 		return Finished;
 	};
 
@@ -152,7 +152,7 @@ namespace Script {
 	ReturnState opJeq(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -168,7 +168,7 @@ namespace Script {
 	ReturnState opJne(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -184,7 +184,7 @@ namespace Script {
 	ReturnState opJgt(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -200,7 +200,7 @@ namespace Script {
 	ReturnState opJge(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -216,7 +216,7 @@ namespace Script {
 	ReturnState opJlt(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -232,7 +232,7 @@ namespace Script {
 	ReturnState opJle(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -248,7 +248,7 @@ namespace Script {
 	ReturnState opJz(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
@@ -263,7 +263,7 @@ namespace Script {
 	ReturnState opJnz(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
@@ -278,7 +278,7 @@ namespace Script {
 	ReturnState opJpos(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
@@ -293,7 +293,7 @@ namespace Script {
 	ReturnState opJneg(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float num = th.StackPop();
@@ -314,7 +314,7 @@ namespace Script {
 	ReturnState opCmp(Thread& th, const Code& code) {
 		if (th.CheckStack(2, 1)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		float right = th.StackPop();
@@ -358,7 +358,7 @@ namespace Script {
 				th.StackPush((float)!((left > 0) ^ (right > 0)));
 				return None;
 		}
-		th.SetErrorCode(InvalidOpcode);
+		th.SetErrorCode(ErrorType::InvalidOpcode);
 		return Error;
 	};
 	//	数値属性取得
@@ -412,7 +412,7 @@ namespace Script {
 				th.StackPush((float)!(num != num));
 				return None;
 		}
-		th.SetErrorCode(InvalidOpcode);
+		th.SetErrorCode(ErrorType::InvalidOpcode);
 		return Error;
 	};
 	//	早送り
@@ -471,7 +471,7 @@ namespace Script {
 	//	Opt : 加算回数(1で普通の加算) ※ 要素数ではない
 	ReturnState opAdds(Thread& th, const Code& code) {
 		if (code.attr.int_ <= 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		if (th.CheckStack(code.attr.int_ + 1, 1)) return Error;
@@ -480,7 +480,7 @@ namespace Script {
 		while (count--) {
 			f += th.StackPop().float_;
 			if (th.StackSize() < 0) {
-				th.SetErrorCode(WorkstackUnderflow);
+				th.SetErrorCode(ErrorType::WorkstackUnderflow);
 				return Error;
 			}
 		}
@@ -503,7 +503,7 @@ namespace Script {
 	//	Opt : 乗算回数(1で普通の乗算) ※ 要素数ではない
 	ReturnState opMuls(Thread& th, const Code& code) {
 		if (code.attr.int_ <= 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		if (th.CheckStack(code.attr.int_ + 1, 1)) return Error;
@@ -512,7 +512,7 @@ namespace Script {
 		while (count--) {
 			f *= th.StackPop().float_;
 			if (th.StackSize() < 0) {
-				th.SetErrorCode(WorkstackUnderflow);
+				th.SetErrorCode(ErrorType::WorkstackUnderflow);
 				return Error;
 			}
 		}
@@ -659,7 +659,7 @@ namespace Script {
 	ReturnState opLen(Thread& th, const Code& code) {
 		if (th.CheckStack(code.attr.int_, 1)) return Error;
 		if (code.attr.int_ < 0) {
-			th.SetErrorCode(InvalidOperand);
+			th.SetErrorCode(ErrorType::InvalidOperand);
 			return Error;
 		}
 		double d = 0;
@@ -667,9 +667,9 @@ namespace Script {
 		int count = code.attr.int_;
 		while (count--) {
 			f = th.StackPop();
-			d += f * f;
+			d += (double)f * f;
 			if (th.StackSize() < 0) {
-				th.SetErrorCode(WorkstackUnderflow);
+				th.SetErrorCode(ErrorType::WorkstackUnderflow);
 				return Error;
 			}
 		}
@@ -784,7 +784,7 @@ namespace Script {
 		if (th.CheckStack(code.attr.int_ < 0 ? 2 : 1, 1)) return Error;
 		int32_t sh = (code.attr.int_ < 0 ? (int32_t)th.StackPop().float_ : code.attr.int_);
 		if (sh < 0) {
-			th.SetErrorCode(InvalidOperand);
+			th.SetErrorCode(ErrorType::InvalidOperand);
 			return Error;
 		}
 		th.StackTop().int_ <<= sh;
@@ -799,7 +799,7 @@ namespace Script {
 		if (th.CheckStack(code.attr.int_ < 0 ? 2 : 1, 1)) return Error;
 		int32_t sh = (code.attr.int_ < 0 ? (int32_t)th.StackPop().float_ : code.attr.int_);
 		if (sh < 0) {
-			th.SetErrorCode(InvalidOperand);
+			th.SetErrorCode(ErrorType::InvalidOperand);
 			return Error;
 		}
 		th.StackTop().int_ >>= sh;
@@ -865,7 +865,7 @@ namespace Script {
 		if (th.CheckStack(1, 1)) return Error;
 		auto index = (unsigned int)th.StackTop().float_;
 		if (index < 0 || th.GetState()->Count() <= index) {
-			th.SetErrorCode(InvalidOperand);
+			th.SetErrorCode(ErrorType::InvalidOperand);
 			return Error;
 		}
 
@@ -880,7 +880,7 @@ namespace Script {
 		if (th.CheckStack(2, 0)) return Error;
 		auto index = (unsigned int)th.StackPop().float_;
 		if (index < 0 || th.GetState()->Count() <= index) {
-			th.SetErrorCode(InvalidOperand);
+			th.SetErrorCode(ErrorType::InvalidOperand);
 			return Error;
 		}
 
@@ -921,7 +921,7 @@ namespace Script {
 				val = -1e18f;
 				break;
 			default: // 否定ビット付きの場合もここに流れる
-				th.SetErrorCode(InvalidOpcode);
+				th.SetErrorCode(ErrorType::InvalidOpcode);
 				return Error;
 		};
 		th.StackPush(val);
@@ -949,7 +949,7 @@ namespace Script {
 		int index = code.attr.int_;
 		if (index < 0) index += th.StackSize();
 		if (index < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		if (th.CheckStack(index + 1, index + 2)) return Error;
@@ -967,7 +967,7 @@ namespace Script {
 		// 先頭要素は設定する値になるため1引いて計算する
 		if (index < 0) index += (th.StackSize() - 1);
 		if (index < 0) {
-			th.SetErrorCode(InvalidOpcode);
+			th.SetErrorCode(ErrorType::InvalidOpcode);
 			return Error;
 		}
 		if (th.CheckStack(index + 2, index + 1)) return Error;
@@ -1030,7 +1030,7 @@ namespace Script {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
 		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
-			th.SetErrorCode(WorkareaOutOfRange);
+			th.SetErrorCode(ErrorType::WorkareaOutOfRange);
 			return Error;
 		}
 		th.GetState()->At(dst).float_ += th.GetState()->At(src).float_;
@@ -1045,7 +1045,7 @@ namespace Script {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
 		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
-			th.SetErrorCode(WorkareaOutOfRange);
+			th.SetErrorCode(ErrorType::WorkareaOutOfRange);
 			return Error;
 		}
 		th.GetState()->At(dst).float_ -= th.GetState()->At(src).float_;
@@ -1060,7 +1060,7 @@ namespace Script {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
 		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
-			th.SetErrorCode(WorkareaOutOfRange);
+			th.SetErrorCode(ErrorType::WorkareaOutOfRange);
 			return Error;
 		}
 		th.GetState()->At(dst).float_ *= th.GetState()->At(src).float_;
@@ -1075,7 +1075,7 @@ namespace Script {
 		unsigned char dst = code.attr.int_ & 0xFF;
 		unsigned char src = (code.attr.int_ >> 4) & 0xFF;
 		if (dst < 0 || th.GetState()->Count() <= dst || src < 0 || th.GetState()->Count() <= src) {
-			th.SetErrorCode(WorkareaOutOfRange);
+			th.SetErrorCode(ErrorType::WorkareaOutOfRange);
 			return Error;
 		}
 		th.GetState()->At(dst).float_ /= th.GetState()->At(src).float_;
