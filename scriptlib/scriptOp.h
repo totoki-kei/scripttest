@@ -81,6 +81,11 @@ namespace Script {
 	ReturnState opSLod(Thread&, const Code&);
 	ReturnState opSSto(Thread&, const Code&);
 
+	ReturnState opGStkLen(Thread&, const Code&);
+	ReturnState opGLod(Thread&, const Code&);
+	ReturnState opGSto(Thread&, const Code&);
+
+
 	ReturnState opNsAdd(Thread&, const Code&);
 	ReturnState opNsSub(Thread&, const Code&);
 	ReturnState opNsMul(Thread&, const Code&);

@@ -125,9 +125,6 @@ namespace Scrip {
 
 
 	struct Ast {
-
-
-
 		struct Constant;
 		struct VarRef;
 		struct List;
@@ -140,7 +137,16 @@ namespace Scrip {
 		struct FlowControl;
 	};
 
-	struct Ast::List : Ast {
+	struct Ast::Constant : public Ast {
+		EvalValue value;
+	};
+
+	struct Ast::VarRef : public Ast {
+		String name;
+		size_t name_hash;
+	};
+
+	struct Ast::List : public Ast {
 		std::vector<AstPtr> list;
 	};
 

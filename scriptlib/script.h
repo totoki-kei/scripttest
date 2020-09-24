@@ -11,7 +11,7 @@
 namespace Script {
 
 	/// <summary>Codeの実行結果を表す列挙対</summary>
-	enum ReturnState {
+	enum class ReturnState {
 		/// <summary>正常に完了</summary>
 		None = 0,
 		/// <summary>スクリプトを中断する</summary>
@@ -24,7 +24,7 @@ namespace Script {
 	};
 
 	/// <summary>スクリプトエラーの情報</summary>
-	enum ErrorType {
+	enum class ErrorType{
 		OK = 0,
 		FileCannotOpen = 0x10,
 		FileCannotRead,
@@ -220,7 +220,7 @@ namespace Script {
 		void SetCodeIndex(int newindex) { codeindex = newindex; }
 		void AddCodeIndex(int offset) { codeindex += offset; }
 		int GetWaitCount() { return waitcount; }
-		ReturnState WaitThread(int count) { waitcount = count; return Wait; }
+		ReturnState WaitThread(int count) { waitcount = count; return ReturnState::Wait; }
 
 		ErrorType GetErrorCode() { return errorCode; }
 		void SetErrorCode(ErrorType e) { errorCode = e; }
@@ -230,7 +230,7 @@ namespace Script {
 		/// <summary>スレッドのスタック等を完全に削除し、指定されたコードインデックスから実行するように設定する。未指定の場合はインデックス0番から開始する。</summary>
 		void Reset(int ep = 0);
 
-		ReturnState CheckStack(unsigned int pop, unsigned int push);
+		bool CheckStack(unsigned int pop, unsigned int push);
 		Value StackPop(int count = 1);
 		Value StackPush(Value);
 		Value& StackTop();
@@ -252,7 +252,7 @@ namespace Script {
 
 
 	namespace Loader {
-		enum AttrType {
+		enum class AttrType {
 			Integer,
 			Float,
 			Comparer,

@@ -77,23 +77,24 @@ int main(int argc, char* argv[])
 	std::cout << "-------- Start --------" << std::endl;
 	auto start = GetTickCount();
 	decltype(start) ticks;
-	while (auto stat = th->Run()) {
+	while (true) {
+		auto stat = th->Run();
 		switch (stat) {
-			case S::Wait:
-				//std::cout << "-------- Wait --------" << std::endl;
-				break;
-			case S::Error:
-				std::cout << "======== Error (code = " << th->GetErrorCode() << ") ========" << std::endl;
-				break;
-			case S::Finished:
-				std::cout << "-------- Finished --------" << std::endl;
-				break;
-		}
-		if ((ticks = GetTickCount() - start) > 60 * 1000) {
-			
+		case S::ReturnState::Wait:
+			//std::cout << "-------- Wait --------" << std::endl;
+			break;
+		case S::ReturnState::Error:
+			std::cout << "======== Error (code = " << (int)th->GetErrorCode() << ") ========" << std::endl;
+			break;
+		case S::ReturnState::Finished:
+			std::cout << "-------- Finished --------" << std::endl;
 			break;
 		}
-		if (stat != S::Wait) break;
+		if ((ticks = GetTickCount() - start) > 60 * 1000) {
+
+			break;
+		}
+		if (stat != S::ReturnState::Wait) break;
 	}
 	std::cout << "** time : " << ticks << " ms" << std::endl;
 	Script::Code dummy;
