@@ -43,6 +43,9 @@ namespace Script {
 		ScriptHasFinished,
 	};
 
+	/// <summary>
+	/// 比較演算方法
+	/// </summary>
 	enum class ComparerAttribute : uint32_t {
 		Equal,
 		NotEqual,
@@ -60,6 +63,9 @@ namespace Script {
 		$NotBit = 0x01,
 	};
 
+	/// <summary>
+	/// 数値属性
+	/// </summary>
 	enum class NumTypeAttribute : uint32_t {
 		Zero,
 		NotZero,
@@ -77,6 +83,9 @@ namespace Script {
 		$NotBit = 0x01,
 	};
 
+	/// <summary>
+	/// プロパティ入出力方向
+	/// </summary>
 	enum class PropertyAttribute : uint32_t {
 		Get,
 		Set,
@@ -103,7 +112,8 @@ namespace Script {
 	};
 
 	/// <summary>スクリプトの処理の一単位。</summary>
-	typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
+	//typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
+	typedef ReturnState (*Opcode)(Thread&, const Code&);
 
 	/// <summary>実行の最小単位。実処理を行うOpcodeと追加のオプション値からなる。初期化時に何もオプションを指定しなかった場合、整数-1が設定される。</summary>
 	struct Code {
@@ -164,12 +174,12 @@ namespace Script {
 		typedef std::shared_ptr<State> Ptr;
 
 	protected:
-		std::shared_ptr<CodeProvider> provider;
+		CodeProvider::Ptr provider;
 		std::vector<Value> workarea;
 		void* registry;
 
 	public:
-		State(std::shared_ptr<CodeProvider>);
+		State(CodeProvider::Ptr);
 
 		/// <summary>指定のコードインデックスから開始するスレッドを作成する。未指定の場合はインデックス0番から開始する。</summary>
 		std::shared_ptr<Thread> CreateThread(int entryPoint = 0);
@@ -194,6 +204,9 @@ namespace Script {
 		void Reset();
 	};
 
+	/// <summary>
+	/// 実行コンテキストを表すクラス
+	/// </summary>
 	class Thread {
 	public:
 		typedef std::shared_ptr<Thread> Ptr;
@@ -250,8 +263,14 @@ namespace Script {
 	};
 
 
-
+	/// <summary>
+	/// CodeProviderインスタンスを生成するクラス、関数、列挙体などをまとめる名前空間
+	/// </summary>
 	namespace Loader {
+
+		/// <summary>
+		/// 命令属性種別
+		/// </summary>
 		enum AttrType {
 			Integer,
 			Float,
@@ -262,22 +281,43 @@ namespace Script {
 			String,
 		};
 
+		/// <summary>
+		/// 実行単位
+		/// </summary>
 		struct CodeSkelton {
 			Opcode opcode;
 			AttrType type;
 		};
 
+		/// <summary>
+		/// コード生成に用いるジェネレーター 命令などを保持する
+		/// </summary>
 		class Generator {
 		public:
 
-			std::unordered_map<std::string, CodeSkelton> map;
+			/// <summary>
+			/// 命令セット 命令名と命令のCodeひな形の組
+			/// 必要に応じて独自定義命令を追加する
+			/// </summary>
+			std::unordered_map<std::string, CodeSkelton> codeMap;
+
+			/// <summary>
+			/// 文字列テーブル
+			/// </summary>
 			std::vector<std::string> stringTable;
 
 			Generator();
 
+			/// <summary>
+			/// Codeを組み立てる
+			/// </summary>
+			/// <param name="sig">命令名(codeMapのキーに対応)</param>
+			/// <param name="attr">属性値文字列表現</param>
+			/// <param name="outBindSymbol"></param>
+			/// <returns></returns>
+			Code MakeCode(const std::string& sig, const std::string& attr, std::string& outBindSymbol);
 
-			Code operator ()(const std::string& sig, const std::string& attr, std::string& bindSymbol);
-
+		private:
 			bool ParseAttrAsInteger(Code& c, const std::string& attr);
 			bool ParseAttrAsFloat(Code& c, const std::string& attr);
 			bool ParseAttrAsComparer(Code& c, const std::string& attr);
@@ -286,15 +326,156 @@ namespace Script {
 			bool ParseAttrAsString(Code& c, const std::string& attr);
 		};
 
-		std::shared_ptr<CodeProvider> Load(const char* filepath, Generator& gen);
-		std::shared_ptr<CodeProvider> FromString(const std::string& source, Generator& gen);
+		struct CodeUnit {
+			Opcode opcode;
+			Code::Attribute attr;
+			std::string str;
 
-		std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes,
+			CodeUnit(Opcode op) : opcode(op), attr(), str() {};
+
+			CodeUnit(Opcode op, float f) : opcode(op), attr(f), str() {};
+			CodeUnit(Opcode op, int32_t si) : opcode(op), attr(si), str() {};
+			CodeUnit(Opcode op, ComparerAttribute c) : opcode(op), attr(c), str() {};
+			CodeUnit(Opcode op, NumTypeAttribute na) : opcode(op), attr(na), str() {};
+			CodeUnit(Opcode op, uint32_t ui) : opcode(op), attr(ui), str() {};
+			CodeUnit(Opcode op, PropertyAttribute p) : opcode(op), attr(p), str() {};
+			CodeUnit(Opcode op, const std::string& s) : opcode(op), attr(), str(s) {};
+
+			CodeUnit(const std::string& entrypointname) : opcode(nullptr), attr(), str(entrypointname) {};
+		};
+
+		/// <summary>
+		/// スクリプトファイルから読み込み、コード列を返す
+		/// </summary>
+		/// <param name="filepath">スクリプトファイルのパス</param>
+		/// <param name="gen">使用するGenerator</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr Load(const char* filepath, Generator& gen);
+
+		/// <summary>
+		/// スクリプト文字列を解釈し、コード列を返す
+		/// </summary>
+		/// <param name="source">スクリプト文字列</param>
+		/// <param name="gen">使用するGenerator</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromString(const std::string& source, Generator& gen);
+
+		/// <summary>
+		/// Codeの配列からCodeProviderインスタンスを作成し返す
+		/// </summary>
+		/// <param name="codes">Codeのvectorで表される命令配列</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromCodeSet(const Code* codes, size_t codes_length);
+
+		/// <summary>
+		/// Codeの配列からCodeProviderインスタンスを作成し返す
+		/// </summary>
+		/// <param name="codes">Codeの配列</param>
+		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromCodeSet(const Code* codes, size_t codes_length,
+			                                      const std::unordered_map<std::string, int>& entrypoints);
+
+		/// <summary>
+		/// Codeの配列からCodeProviderインスタンスを作成し返す
+		/// </summary>
+		/// <param name="codes">Codeのvectorで表される命令配列</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromCodeSet(const std::vector<Code>& codes);
+
+		/// <summary>
+		/// Codeの配列からCodeProviderインスタンスを作成し返す
+		/// </summary>
+		/// <param name="codes">Codeのvectorで表される命令配列</param>
+		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromCodeSet(const std::vector<Code>& codes,
+                                                  const std::unordered_map<std::string, int>& entrypoints);
+
+		/// <summary>
+		/// Codeの配列からCodeProviderインスタンスを作成し返す
+		/// </summary>
+		/// <param name="codes">Codeのvectorで表される命令配列</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromCodeSet(std::vector<Code>&& codes);
+
+		/// <summary>
+		/// Codeの配列からCodeProviderインスタンスを作成し返す
+		/// </summary>
+		/// <param name="codes">Codeのvectorで表される命令配列</param>
+		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
+		/// <returns>CodeProviderインスタンス</returns>
+		CodeProvider::Ptr FromCodeSet(std::vector<Code>&& codes,
 												  std::unordered_map<std::string, int>&& entrypoints);
-		std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes,
-												  const std::unordered_map<std::string, int>& entrypoints);
-		std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes);
-		std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes);
+
+		
+		CodeProvider::Ptr FromCodeSet(const CodeUnit* codes, size_t codes_length);
+
+		
+		class Builder {
+			std::vector<Code> code_array;
+			std::vector<std::string> string_table;
+			std::unordered_map<std::string, int> entrypoints;
+
+			struct DifferedBind {
+				size_t index;
+				std::string entrypoint_name;
+			};
+			std::vector<DifferedBind> differed_bind_list;
+
+		public:
+			Builder();
+
+			CodeProvider::Ptr MakeCodeProvider() const;
+
+#define MAKEOP(name, op, attr) Builder& name ( Code::Attribute operand );
+#define MAKEOP_INT(name, op) Builder& name ( int operand ); Builder& name ();
+#define MAKEOP_FLOAT(name, op) Builder& name ( float operand ); Builder& name ();
+#define MAKEOP_CMP(name, op) Builder& name ( ComparerAttribute operand );
+#define MAKEOP_NT(name, op) Builder& name ( NumTypeAttribute operand );
+#define MAKEOP_ENTRYPOINT(name, op) Builder& name ( const std::string& entrypoint_name ); Builder& Builder:: ## name ();
+#define MAKEOP_PROP(name, op) Builder& name ( PropertyAttribute direction );
+#define MAKEOP_STR(name, op) Builder& name ( const std::string& str ); Builder& name ();
+#define MAKEOP_UNIT(name, op) Builder& name ();
+
+#include "scriptOp.inl"
+
+#undef MAKEOP_UNIT
+#undef MAKEOP_STR
+#undef MAKEOP_PROP
+#undef MAKEOP_ENTRYPOINT
+#undef MAKEOP_NT
+#undef MAKEOP_CMP
+#undef MAKEOP_FLOAT
+#undef MAKEOP_INT
+#undef MAKEOP
+
+			/// <summary>
+			/// 文字列テーブルに文字列を追加しそのインデックスを得る
+			/// </summary>
+			/// <param name="str"></param>
+			/// <returns></returns>
+			int AddString(const std::string& str);
+
+			/// <summary>
+			/// エントリポイントを設定する
+			/// </summary>
+			/// <param name="name">エントリポイント名</param>
+			/// <param name="pos">設定する命令位置</param>
+			/// <returns></returns>
+			void AddEntryPoint(const std::string& name, int pos);
+
+
+			Builder& operator ()(Opcode op);
+			Builder& operator ()(Opcode op, Code::Attribute attr);
+			Builder& operator ()(Opcode op, const std::string& attr, bool is_entrypoint = false);
+			
+
+			// 現在の位置にラベルを追加
+			Builder& operator [](const std::string& label_name);
+
+
+		};
 	}
 }
 

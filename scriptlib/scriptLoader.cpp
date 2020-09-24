@@ -110,7 +110,7 @@ namespace Script { namespace Loader {
 
 				std::string ep;
 				try {
-					Code c = gen(sig, attr, ep);
+					Code c = gen.MakeCode(sig, attr, ep);
 					if (ep.size()) {
 						epToSolve.insert({ ep, (int)codes.size() });
 					}
@@ -153,25 +153,39 @@ namespace Script { namespace Loader {
 			}
 		}
 
-		auto ret = new SimpleCodeProvider;
+		auto ret = std::make_unique<SimpleCodeProvider>();
 		ret->codes = std::move(codes);
 		ret->entrypoints = std::move(entrypoints);
 		ret->stringTable = std::move(gen.stringTable);
 
+		return std::shared_ptr<CodeProvider>(std::move(ret));
+	}
+
+	std::shared_ptr<CodeProvider> FromCodeSet(const Code* codes, size_t codes_length) {
+		auto ret = std::make_unique<SimpleCodeProvider>();
+		ret->codes = std::vector<Code>(codes, codes + codes_length);
+
+		return std::shared_ptr<CodeProvider>(std::move(ret));
+	}
+
+	std::shared_ptr<CodeProvider> FromCodeSet(const Code* codes, size_t codes_length,
+		                                      const std::unordered_map<std::string, int>& entrypoints) {
+		auto ret = new SimpleCodeProvider;
+		ret->codes = std::vector<Code>(codes, codes+codes_length);
+		ret->entrypoints = entrypoints;
+
 		return std::shared_ptr<CodeProvider>(ret);
 	}
 
-	std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes,
-											  std::unordered_map<std::string, int>&& entrypoints) {
+	std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes) {
 		auto ret = new SimpleCodeProvider;
-		ret->codes = std::move(codes);
-		ret->entrypoints = std::move(entrypoints);
+		ret->codes = codes;
 
 		return std::shared_ptr<CodeProvider>(ret);
 	}
 
 	std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes,
-											  const std::unordered_map<std::string, int>& entrypoints) {
+		                                      const std::unordered_map<std::string, int>& entrypoints) {
 		auto ret = new SimpleCodeProvider;
 		ret->codes = codes;
 		ret->entrypoints = entrypoints;
@@ -186,19 +200,63 @@ namespace Script { namespace Loader {
 		return std::shared_ptr<CodeProvider>(ret);
 	}
 
-	std::shared_ptr<CodeProvider> FromCodeSet(const std::vector<Code>& codes) {
-		auto ret = new SimpleCodeProvider;
-		ret->codes = codes;
+	std::shared_ptr<CodeProvider> FromCodeSet(std::vector<Code>&& codes,
+											  std::unordered_map<std::string, int>&& entrypoints) {
+		auto ret = std::make_unique<SimpleCodeProvider>();
+		ret->codes = std::move(codes);
+		ret->entrypoints = std::move(entrypoints);
 
-		return std::shared_ptr<CodeProvider>(ret);
+		return std::shared_ptr<CodeProvider>(std::move(ret));
 	}
+
+	std::shared_ptr<CodeProvider> FromCodeSet(const CodeUnit* codes, size_t codes_length) {
+		auto ret = std::make_unique<SimpleCodeProvider>();
+
+		const auto* begin = codes;
+		const auto* end = codes + codes_length;
+
+
+		for (auto p = begin; p != end; ++p) {
+
+			if (p->opcode && p->str.size() > 0) {
+				// 文字列属性のOpcode
+				// 文字列テーブルに追加してインデックスを属性値として使用する
+				int index;
+
+				auto it = std::find(ret->stringTable.begin(), ret->stringTable.end(), p->str);
+				if (it != ret->stringTable.end()) {
+					// すでに同じ文字列が存在する場合は同じインデックスを使う
+					index = std::distance(ret->stringTable.begin(), it);
+				} else {
+					index = (int)ret->stringTable.size();
+					ret->stringTable.push_back(p->str);
+				}
+				ret->codes.emplace_back(p->opcode, index);
+			}
+			else if (!p->opcode) {
+				// エントリポイント
+				// codesへの登録はせずエントリポイントの追加のみ行う
+				auto index = ret->codes.size();
+				ret->entrypoints.emplace(p->str, (int)index);
+			}
+			else {
+				// 通常Opcode
+				ret->codes.emplace_back(p->opcode, p->attr);
+			}
+
+		}
+
+		return std::shared_ptr<CodeProvider>(std::move(ret));
+	}
+
+	
 
 	Generator::Generator() {
-		BuildOpcodes(map);
+		BuildOpcodes(codeMap);
 	}
 
-	Code Generator::operator ()(const std::string& sig, const std::string& attr, std::string& outBindSymbol) {
-		auto &sk = map.at(sig);
+	Code Generator::MakeCode(const std::string& sig, const std::string& attr, std::string& outBindSymbol) {
+		auto &sk = codeMap.at(sig);
 		Code c;
 		c.opcode = sk.opcode;
 		switch (sk.type) {
@@ -342,6 +400,121 @@ namespace Script { namespace Loader {
 		return true;
 	}
 
+	Builder::Builder() {}
+
+	CodeProvider::Ptr Builder::MakeCodeProvider() const {
+		auto ret = std::make_unique<SimpleCodeProvider>();
+
+		// TODO: ここに未解決のバインドが残っていたときのエラー処理を記述
+
+		ret->codes = this->code_array;
+		ret->entrypoints = this->entrypoints;
+		ret->stringTable = this->string_table;
+
+		return CodeProvider::Ptr{ std::move(ret) };
+	}
+
+#define MAKEOP(name, op, attr) Builder& Builder:: ## name ( Code::Attribute operand ) { return (*this)(op, operand); }
+#define MAKEOP_INT(name, op) Builder& Builder:: ## name ( int operand ) { return (*this)(op, operand); } Builder& Builder:: ## name () { return (*this)(op); }
+#define MAKEOP_FLOAT(name, op) Builder& Builder:: ## name ( float operand ) { return (*this)(op, operand); }  Builder& Builder:: ## name () { return (*this)(op); }
+#define MAKEOP_CMP(name, op) Builder& Builder:: ## name ( ComparerAttribute operand ) { return (*this)(op, operand); }
+#define MAKEOP_NT(name, op) Builder& Builder:: ## name ( NumTypeAttribute operand ) { return (*this)(op, operand); }
+#define MAKEOP_ENTRYPOINT(name, op) Builder& Builder:: ## name ( const std::string& entrypoint_name ) { return (*this)(op, entrypoint_name, true); } Builder& Builder:: ## name () { return (*this)(op); }
+#define MAKEOP_PROP(name, op) Builder& Builder:: ## name ( PropertyAttribute direction ) { return (*this)(op, direction); }
+#define MAKEOP_STR(name, op) Builder& Builder:: ## name ( const std::string& str ) { return (*this)(op, str, false); } Builder& Builder:: ## name () { return (*this)(op); }
+#define MAKEOP_UNIT(name, op) Builder& Builder:: ## name () { return (*this)(op); }
+
+#include "scriptOp.inl"
+
+#undef MAKEOP_UNIT
+#undef MAKEOP_STR
+#undef MAKEOP_PROP
+#undef MAKEOP_ENTRYPOINT
+#undef MAKEOP_NT
+#undef MAKEOP_CMP
+#undef MAKEOP_FLOAT
+#undef MAKEOP_INT
+#undef MAKEOP
+
+	int Builder::AddString(const std::string& str) {
+		auto it = std::find(string_table.rbegin(), string_table.rend(), str);
+		if (it != string_table.rend()) {
+			// 同一インデックスを返す
+			// 同じ文字列が局所的に出現するケースの方が多そうな気がするので逆順検索
+			return (int)std::distance(it, string_table.rend());
+		}
+		else {
+			// 末尾追加
+			int ret = (int)string_table.size();
+			string_table.push_back(str);
+			return ret;
+		}
+	}
+
+	void Builder::AddEntryPoint(const std::string& name, int pos) {
+		entrypoints.emplace(name, pos);
+	}
+
+	Builder& Builder::operator()(Opcode op) {
+		code_array.emplace_back(Code{ op });
+		return *this;
+	}
+
+	Builder& Builder::operator()(Opcode op, Code::Attribute attr) {
+		code_array.emplace_back(Code{ op, attr });
+		return *this;
+	}
+
+	Builder& Builder::operator ()(Opcode op, const std::string& attr, bool is_entrypoint) {
+		if (is_entrypoint) {
+			if (attr.empty()) {
+				// スタックトップを使用する方式
+				// -1(デフォルト値)を使用してコード生成
+				code_array.emplace_back(op);
+			}
+			else {
+				// エントリポイント名指定
+				auto it = entrypoints.find(attr);
+				if (it == entrypoints.end()) {
+					// 見つからない: 遅延バインド対象として記憶しておく
+					int index = (int)code_array.size();
+					code_array.emplace_back(op);
+
+					DifferedBind bind = { index, attr };
+					differed_bind_list.push_back(bind);
+				}
+				else {
+					// 見つかった場合そのエントリポイントのインデックスを使用
+					code_array.emplace_back(op, it->second);
+				}
+			}
+		}
+		else {
+			// 文字列を登録しそれを使用してコード生成
+			int str_index = AddString(attr);
+			code_array.emplace_back(op, str_index);
+		}
+
+		return *this;
+	}
+
+	Builder& Builder::operator [](const std::string& label_name) {
+		auto index = (int)code_array.size();
+		entrypoints.emplace(label_name, index);
+
+		for (auto it = differed_bind_list.begin(); it != differed_bind_list.end(); /* nop */) {
+			if (it->entrypoint_name == label_name) {
+				// 遅延バインドの解決
+				code_array[it->index].attr = index;
+				it = differed_bind_list.erase(it);
+			}
+			else {
+				++it;
+			}
+		}
+
+		return *this;
+	}
 
 }}
 

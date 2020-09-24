@@ -5,9 +5,17 @@
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -23,7 +31,20 @@
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -36,15 +57,31 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)\</OutDir>
+    <CodeAnalysisRuleSet>C:\Users\Kei\Source\Repos\scripttest\NativeRecommendedRulesMinusC26812.ruleset</CodeAnalysisRuleSet>
+    <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <CodeAnalysisRuleSet>C:\Users\Kei\Source\Repos\scripttest\NativeRecommendedRulesMinusC26812.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)\</OutDir>
+    <CodeAnalysisRuleSet>C:\Users\Kei\Source\Repos\scripttest\NativeRecommendedRulesMinusC26812.ruleset</CodeAnalysisRuleSet>
+    <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CodeAnalysisRuleSet>C:\Users\Kei\Source\Repos\scripttest\NativeRecommendedRulesMinusC26812.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -62,13 +99,42 @@
     <CustomBuildStep>
       <Command>copy /Y script.h $(SolutionDir)include\.
 copy /Y scriptOp.h $(SolutionDir)include\.
+copy /Y scriptOp.inl $(SolutionDir)include\.
 </Command>
     </CustomBuildStep>
     <CustomBuildStep>
-      <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;%(Outputs)</Outputs>
+      <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
     </CustomBuildStep>
     <CustomBuildStep>
-      <Inputs>script.h;scriptOp.h;%(Inputs)</Inputs>
+      <Inputs>script.h;scriptOp.h;scriptOp.inl;%(Inputs)</Inputs>
+    </CustomBuildStep>
+    <Lib />
+    <Lib />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <CustomBuildStep>
+      <Command>copy /Y script.h $(SolutionDir)include\.
+copy /Y scriptOp.h $(SolutionDir)include\.
+copy /Y scriptOp.inl $(SolutionDir)include\.
+</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Inputs>script.h;scriptOp.h;scriptOp.inl;%(Inputs)</Inputs>
     </CustomBuildStep>
     <Lib />
     <Lib />
@@ -93,9 +159,36 @@ copy /Y scriptOp.h $(SolutionDir)include\.
     <CustomBuildStep>
       <Command>copy /Y script.h $(SolutionDir)include\.
 copy /Y scriptOp.h $(SolutionDir)include\.
+copy /Y scriptOp.inl $(SolutionDir)include\.
 </Command>
-      <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;%(Outputs)</Outputs>
-      <Inputs>script.h;scriptOp.h;%(Inputs)</Inputs>
+      <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
+      <Inputs>script.h;scriptOp.h;scriptOp.inl;%(Inputs)</Inputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <CustomBuildStep>
+      <Command>copy /Y script.h $(SolutionDir)include\.
+copy /Y scriptOp.h $(SolutionDir)include\.
+copy /Y scriptOp.inl $(SolutionDir)include\.
+</Command>
+      <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
+      <Inputs>script.h;scriptOp.h;scriptOp.inl;%(Inputs)</Inputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -109,6 +202,9 @@ copy /Y scriptOp.h $(SolutionDir)include\.
   <ItemGroup>
     <ClInclude Include="script.h" />
     <ClInclude Include="scriptOp.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="scriptOp.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

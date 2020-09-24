@@ -6,101 +6,11 @@
 namespace Script {
 	namespace Loader {
 		void BuildOpcodes(std::unordered_map<std::string, CodeSkelton>& map) {
-#define OPMAPI(name, op) map[ #name ] = { op , AttrType::Integer }
-#define OPMAPF(name, op) map[ #name ] = { op , AttrType::Float }
-#define OPMAP(name, op, attr) map[ #name ] = { op , attr }
+#define MAKEOP(name, op, attr) map[ #name ] = { op , attr };
 
-			OPMAPI(nop, opNull);
+#include "scriptOp.inl"
 
-			OPMAPI(wait, opWait);
-			OPMAPI(end, opEnd);
-
-			OPMAP(goto, opGoto, AttrType::EntryPointSymbol);
-
-			OPMAPI(jump, opJmp);
-			OPMAPI(jump_eq, opJeq);
-			OPMAPI(jump_neq, opJne);
-			OPMAPI(jump_gt, opJgt);
-			OPMAPI(jump_geq, opJge);
-			OPMAPI(jump_lt, opJlt);
-			OPMAPI(jump_leq, opJle);
-			OPMAPI(jump_zero, opJz);
-			OPMAPI(jump_nonzero, opJnz);
-			OPMAPI(jump_pos, opJpos);
-			OPMAPI(jump_neg, opJneg);
-
-			OPMAP(cmp, opCmp, AttrType::Comparer);
-			OPMAP(chk, opIs, AttrType::NumType);
-
-			OPMAPI(fwd, opFwd);
-			OPMAPI(rew, opRew);
-
-			OPMAPF(add, opAdd);
-			OPMAPI(adds, opAdds);
-			OPMAPF(mul, opMul);
-			OPMAPI(muls, opMuls);
-			OPMAPF(sub, opSub);
-			OPMAPF(neg, opNeg);
-			OPMAPF(div, opDiv);
-			OPMAPF(mod, opMod);
-			OPMAPF(sin, opSin);
-			OPMAPF(cos, opCos);
-			OPMAPF(sincos, opSinCos);
-			OPMAPF(cossin, opCosSin);
-			OPMAPF(tan, opTan);
-			OPMAPF(atan, opArg);
-			OPMAPF(sqrt, opSqrt);
-			OPMAPF(pow, opPow);
-			OPMAPF(log, opLog);
-			OPMAPF(ln, opLog10);
-			OPMAPI(len, opLen);
-			OPMAPF(deg2rad, opD2r);
-			OPMAPF(rad2deg, opR2d);
-			OPMAPF(abs, opAbs);
-			OPMAPF(round, opRound);
-			OPMAPF(trunc, opTrunc);
-			OPMAPF(floor, opFloor);
-			OPMAPF(ceil, opCeil);
-
-			OPMAPI(int2num, opI2n);
-			OPMAPI(num2int, opN2i);
-			OPMAPI(ipush, opIPush);
-			OPMAPI(ilsh, opILsh);
-			OPMAPI(irsh, opIRsh);
-			OPMAPI(iand, opIAnd);
-			OPMAPI(ior, opIOr);
-			OPMAPI(ixor, opIXor);
-			OPMAPI(ibool, opIBool);
-
-			OPMAPI(get, opLod);
-			OPMAPI(set, opSto);
-			OPMAPI(vget, opVlod);
-			OPMAPI(vset, opVsto);
-			OPMAP(n, opSpps, AttrType::NumType);
-
-			OPMAPI(dup, opDup);
-			OPMAPI(pop, opDel);
-			OPMAPI(lget, opSLod);
-			OPMAPI(lset, opSSto);
-			OPMAPI(clear, opCls);
-
-			OPMAP(call, opCall, AttrType::EntryPointSymbol);
-			OPMAPI(ret, opRet);
-
-			OPMAPI(enter, opPushSb);
-			OPMAPI(leave, opPopSb);
-
-			OPMAPF(push, opPush);
-			OPMAPI(stklen, opStkLen);
-
-			OPMAPI(dadd, opNsAdd);
-			OPMAPI(dsub, opNsSub);
-			OPMAPI(dmul, opNsMul);
-			OPMAPI(ddiv, opNsDiv);
-
-#undef OPMAP
-#undef OPMAPF
-#undef OPMAPI
+#undef MAKEOP
 		}
 	}
 
@@ -843,51 +753,55 @@ namespace Script {
 
 	
 	//	変数読み出し(定数アドレス)
-	//	Stk : 0 / 1
-	//	Opt : 変数番地
+	//	Stk : 0 / 1 or 1 / 1
+	//	Opt : 変数番地 負数の場合はスタックトップの値
 	ReturnState opLod(Thread& th, const Code& code) {
 		if (th.CheckStack(0, 1)) return Error;
-		th.StackPush(th.GetState()->At(code.attr.int_));
+		th.StackPush(th.GetState()->At(code.attr.int_ < 0 ? th.StackPop().int_ : code.attr.int_));
 		return None;
 	};
 	//	変数書き込み(定数アドレス)
-	//	Stk : 1 / 0
+	//	Stk : 1 / 0 or 2 / 0
 	//	Opt : 変数番地
 	ReturnState opSto(Thread& th, const Code& code) {
 		if (th.CheckStack(1, 0)) return Error;
-		th.GetState()->At(code.attr.int_) = th.StackPop();
+		th.GetState()->At(code.attr.int_ < 0 ? th.StackPop().int_ : code.attr.int_) = th.StackPop();
 		return None;
 	};
-	//	変数読み込み(可変アドレス)
-	//	Stk : 1 / 1
-	//	Opt : 未使用
-	ReturnState opVlod(Thread& th, const Code& code) {
-		if (th.CheckStack(1, 1)) return Error;
-		auto index = (unsigned int)th.StackTop().float_;
-		if (index < 0 || th.GetState()->Count() <= index) {
-			th.SetErrorCode(InvalidOperand);
-			return Error;
-		}
 
-		th.StackTop() = th.GetState()->At(index);
 
-		return None;
-	};
-	//	変数書き込み(可変アドレス)
-	//	Stk : 2 / 0
-	//	Opt : 未使用
-	ReturnState opVsto(Thread& th, const Code& code) {
-		if (th.CheckStack(2, 0)) return Error;
-		auto index = (unsigned int)th.StackPop().float_;
-		if (index < 0 || th.GetState()->Count() <= index) {
-			th.SetErrorCode(InvalidOperand);
-			return Error;
-		}
+	////	変数読み込み(可変アドレス)
+	////	Stk : 1 / 1
+	////	Opt : 未使用
+	//ReturnState opVlod(Thread& th, const Code& code) {
+	//	if (th.CheckStack(1, 1)) return Error;
+	//	auto index = (unsigned int)th.StackTop().float_;
+	//	if (index < 0 || th.GetState()->Count() <= index) {
+	//		th.SetErrorCode(InvalidOperand);
+	//		return Error;
+	//	}
 
-		th.GetState()->At(index) = th.StackPop();
+	//	th.StackTop() = th.GetState()->At(index);
 
-		return None;
-	};
+	//	return None;
+	//};
+	////	変数書き込み(可変アドレス)
+	////	Stk : 2 / 0
+	////	Opt : 未使用
+	//ReturnState opVsto(Thread& th, const Code& code) {
+	//	if (th.CheckStack(2, 0)) return Error;
+	//	auto index = (unsigned int)th.StackPop().float_;
+	//	if (index < 0 || th.GetState()->Count() <= index) {
+	//		th.SetErrorCode(InvalidOperand);
+	//		return Error;
+	//	}
+
+	//	th.GetState()->At(index) = th.StackPop();
+
+	//	return None;
+	//};
+
+
 	//	特殊値プッシュ
 	//	Stk : 0 / 1
 	//	Opt : 積む値の種類
