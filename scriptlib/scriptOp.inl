@@ -132,6 +132,10 @@ MAKEOP_INT(leave, opPopSb)
 MAKEOP_FLOAT(push, opPush)
 MAKEOP_UNIT(stklen, opStkLen)
 
+MAKEOP_INT(gget, opGLod)
+MAKEOP_INT(gset, opGSto)
+MAKEOP_UNIT(gstklen, opGStkLen)
+
 MAKEOP_INT(dadd, opNsAdd)
 MAKEOP_INT(dsub, opNsSub)
 MAKEOP_INT(dmul, opNsMul)
