@@ -243,7 +243,7 @@ namespace Script {
 		/// <summary>スレッドのスタック等を完全に削除し、指定されたコードインデックスから実行するように設定する。未指定の場合はインデックス0番から開始する。</summary>
 		void Reset(int ep = 0);
 
-		ReturnState CheckStack(unsigned int pop, unsigned int push);
+		bool CheckStack(unsigned int pop, unsigned int push);
 		Value StackPop(int count = 1);
 		Value StackPush(Value);
 		Value& StackTop();

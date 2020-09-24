@@ -25,8 +25,7 @@ namespace Script {
 	//	Stk : # / #
 	//	Opt : 待機カウント(0以上、0の場合は中断のみ行う)
 	ReturnState opWait(Thread& th, const Code& code) {
-		th.WaitThread(code.attr.int_ > 0 ? code.attr.int_ : 0);
-		return Wait;
+		return th.WaitThread(code.attr.int_ > 0 ? code.attr.int_ : 0);
 	};
 	//	終了
 	//	Stk : # / #
@@ -210,7 +209,7 @@ namespace Script {
 		if (num < 0.0)
 			th.AddCodeIndex(code.attr.int_);
 		
-		return None;
+		return ReturnState::None;
 	};
 	//	比較演算
 	//	Stk : 2 / 1
@@ -577,7 +576,7 @@ namespace Script {
 		int count = code.attr.int_;
 		while (count--) {
 			f = th.StackPop();
-			d += f * f;
+			d += (double)f * f;
 			if (th.StackSize() < 0) {
 				th.SetErrorCode(WorkstackUnderflow);
 				return Error;
@@ -911,17 +910,13 @@ namespace Script {
 	//	Stk : 0 / 0
 	//	Opt : ジャンプ先アドレス
 	ReturnState opCall(Thread& th, const Code& code) {
-		if (auto ret = th.GoSub(code.attr.ep_)) return ret;
-
-		return None;
+		return th.GoSub(code.attr.ep_);
 	};
 	//	リターン
 	//	Stk : 0 / 0
 	//	Opt : 未使用
 	ReturnState opRet(Thread& th, const Code& code) {
-		if (auto ret = th.ReturnSub()) return ret;
-
-		return None;
+		return th.ReturnSub();
 	};
 
 	ReturnState opPush(Thread& th, const Code& code) {
@@ -932,9 +927,51 @@ namespace Script {
 
 	ReturnState opStkLen(Thread& th, const Code& code) {
 		th.StackPush((float)th.StackSize());
-
 		return None;
 	}
+
+	ReturnState opGStkLen(Thread& th, const Code& code) {
+		th.StackPush((float)th.WorkStackSize());
+		return None;
+	}
+
+	//	スタック内指定位置要素の複製
+	//	Stk : 0 / 1
+	//	Opt : スタックベースからのオフセット
+	//        マイナスの時はトップからの相対位置(-1がスタックトップ)
+	ReturnState opGLod(Thread& th, const Code& code) {
+		int index = code.attr.int_;
+		if (index < 0) index += th.WorkStackSize();
+		if (index < 0) {
+			th.SetErrorCode(InvalidOpcode);
+			return Error;
+		}
+		if (index >= th.WorkStackSize()) return Error;
+
+		th.StackPush(th.WorkStackAt(index));
+		return None;
+	};
+
+	//	スタック内指定位置要素への代入
+	//	Stk : 1 / 0
+	//	Opt : スタックベースからのオフセット
+	//        マイナスの時はトップからの相対位置(-1がスタックトップ)
+	ReturnState opGSto(Thread& th, const Code& code) {
+		int index = code.attr.int_;
+		// 先頭要素は設定する値になるため1引いて計算する
+		if (index < 0) index += (th.WorkStackSize() - 1);
+		if (index < 0) {
+			th.SetErrorCode(InvalidOpcode);
+			return Error;
+		}
+		if (th.CheckStack(1, 0)) return Error;
+		if (index >= th.WorkStackSize() - 1) return Error;
+
+		auto val = th.StackPop();
+		th.WorkStackAt(index) = val;
+		return None;
+	};
+
 
 	// 定数アドレス変数間の直接加算
 	//	Stk : 0 / 0
@@ -999,17 +1036,13 @@ namespace Script {
 	ReturnState opPushSb(Thread& th, const Code& code) {
 		int n = code.attr.int_;
 		if (n < 0) n = 0;
-		if (auto ret = th.FramePush(n)) return ret;
-
-		return None;
+		return th.FramePush(n);
 	}
 
 	ReturnState opPopSb(Thread& th, const Code& code) {
 		int n = code.attr.int_;
 		if (n < 0) n = 0;
-		if (auto ret = th.FramePop(n)) return ret;
-
-		return None;
+		return th.FramePop(n);
 	}
 
 

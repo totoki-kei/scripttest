@@ -31,16 +31,16 @@ namespace Script {
 		: state{ s }
 		, codeindex{ ent }
 		, waitcount{ 0 }
-		, errorCode{ OK }
+		, errorCode{ ErrorType::OK }
 		, stackBase{ 0 } {}
 
 	ReturnState Thread::Run(bool nowait) {
-		if (errorCode)
-			return Error;
+		if (errorCode != ErrorType::OK)
+			return ReturnState::Error;
 
 		if (waitcount) {
 			waitcount--;
-			return Wait;
+			return ReturnState::Wait;
 		}
 
 		while (true) {
@@ -48,13 +48,13 @@ namespace Script {
 			
 			if (code.opcode) {
 				switch (ReturnState rs = code.opcode(*this, code)) {
-					case Wait:
+				case ReturnState::Wait:
 						if (nowait) break;;
 
 						codeindex++;
 						/* fall-through */
-					case Error:
-					case Finished:
+				case ReturnState::Error:
+				case ReturnState::Finished:
 						return rs;
 						break;
 				}
@@ -62,7 +62,7 @@ namespace Script {
 			codeindex++;
 		};
 
-		return Finished;
+		return ReturnState::Finished;
 	};
 
 	void Thread::Reset(int ep) {
@@ -92,7 +92,7 @@ namespace Script {
 
 	Value& Thread::StackTop() {
 		if (workstack.size() <= stackBase) {
-			this->SetErrorCode(WorkstackUnderflow);
+			this->SetErrorCode(ErrorType::WorkstackUnderflow);
 
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Stack underflow." };
@@ -102,13 +102,13 @@ namespace Script {
 
 	Value& Thread::StackAt(int index) {
 		if (workstack.size() <= stackBase) {
-			this->SetErrorCode(WorkstackUnderflow);
+			this->SetErrorCode(ErrorType::WorkstackUnderflow);
 
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Stack underflow." };
 		}
 		if (workstack.size() - stackBase < index) {
-			this->SetErrorCode(InvalidOpcode);
+			this->SetErrorCode(ErrorType::InvalidOpcode);
 
 			// —áŠO‚ð“Š‚°‚é
 			throw std::domain_error{ "Invalid stack index." };
@@ -125,60 +125,60 @@ namespace Script {
 		workstack.erase(workstack.begin() + stackBase, workstack.end());
 	}
 
-	ReturnState Thread::CheckStack(unsigned int pop, unsigned int /* push ( unused ) */) {
+	bool Thread::CheckStack(unsigned int pop, unsigned int /* push ( unused ) */) {
 		if (StackSize() < pop) {
-			SetErrorCode(WorkstackUnderflow);
-			return Error;
+			SetErrorCode(ErrorType::WorkstackUnderflow);
+			return true;
 		}
 		//int requiredSize = (int)state->workstack.size() - (int)pop + (int)push;
 		//while (requiredSize >= state->workstack.size()) {
 		//	state->workstack.resize(state->workstack.size() * 2 + 1);
 		//}
-		return ReturnState::None;
+		return false;
 	}
 
 	ReturnState Thread::FramePush(int n) {
-		if (CheckStack(n, 0)) return Error;
+		if (CheckStack(n, 0)) return ReturnState::Error;
 		size_t newbase = workstack.size() - n + 1;
 		workstack.insert(workstack.begin() + newbase - 1, (int)stackBase);
 		stackBase = newbase;
-		return None;
+		return ReturnState::None;
 	}
 
 	ReturnState Thread::FramePop(int n) {
 		if (stackBase == 0) {
-			this->SetErrorCode(WorkstackUnderflow);
-			return Error;
+			this->SetErrorCode(ErrorType::WorkstackUnderflow);
+			return ReturnState::Error;
 		}
-		if (CheckStack(n, 0)) return Error;
+		if (CheckStack(n, 0)) return ReturnState::Error;
 
 		auto iter = workstack.begin() + stackBase - 1;
 		size_t restorebase = (size_t)iter->int_;
 		workstack.erase(iter, workstack.end() - n);
 		stackBase = restorebase;
-		return None;
+		return ReturnState::None;
 	}
 
 	ReturnState Thread::GoSub(int addr) {
 		if (addr < 0 || GetCodeProvider()->Length() <= addr) {
-			SetErrorCode(CodeindexOutOfRange);
-			return Error;
+			SetErrorCode(ErrorType::CodeindexOutOfRange);
+			return ReturnState::Error;
 		}
 
 		callstack.push_back(codeindex);
 		SetCodeIndex(addr - 1);
-		return None;
+		return ReturnState::None;
 	}
 
 	ReturnState Thread::ReturnSub() {
 		if (callstack.size() == 0) {
-			SetErrorCode(ScriptHasFinished);
-			return Finished;
+			SetErrorCode(ErrorType::ScriptHasFinished);
+			return ReturnState::Finished;
 		}
 		SetCodeIndex(callstack.back());
 		callstack.pop_back();
 
-		return None;
+		return ReturnState::None;
 	}
 
 
