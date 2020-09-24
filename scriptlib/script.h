@@ -106,14 +106,14 @@ namespace Script {
 		inline Value(int32_t i) : int_{ i } {};
 		inline Value(void* p) : ptr_{ p } {};
 
-		operator float&() { return float_; }
-		operator int32_t&() { return int_; }
-		operator void*&() { return ptr_; }
+		operator float& () { return float_; }
+		operator int32_t& () { return int_; }
+		operator void*& () { return ptr_; }
 	};
 
 	/// <summary>スクリプトの処理の一単位。</summary>
 	//typedef std::function<ReturnState(Thread&, const Code&)> Opcode;
-	typedef ReturnState (*Opcode)(Thread&, const Code&);
+	typedef ReturnState(*Opcode)(Thread&, const Code&);
 
 	/// <summary>実行の最小単位。実処理を行うOpcodeと追加のオプション値からなる。初期化時に何もオプションを指定しなかった場合、整数-1が設定される。</summary>
 	struct Code {
@@ -176,7 +176,7 @@ namespace Script {
 	protected:
 		CodeProvider::Ptr provider;
 		std::vector<Value> workarea;
-		void* registry;
+		void* tag;
 
 	public:
 		State(CodeProvider::Ptr);
@@ -192,12 +192,12 @@ namespace Script {
 			if (index <= 256 && index >= (int)workarea.size()) {
 				workarea.resize(index + 1);
 			}
-			return workarea[index]; 
+			return workarea[index];
 		}
 		size_t Count() { return workarea.size(); }
 
-		void * GetRegistry() { return registry; }
-		void SetRegistry(void* ptr) { registry = ptr; }
+		void* GetTag() const { return tag; }
+		void* SetTag(void* new_tag) { auto old = tag; tag = new_tag; return old; }
 
 
 		/// <summary>ワークエリアを整数値0で初期化する。</summary>
@@ -217,10 +217,12 @@ namespace Script {
 		std::vector<Value> workstack;
 		std::vector<int> callstack;
 		size_t stackBase;
-		
+
 		int codeindex;
 		int waitcount;
 		ErrorType errorCode;
+
+		void* tag;
 
 	public:
 
@@ -260,6 +262,9 @@ namespace Script {
 		size_t CallStackSize() { return callstack.size(); }
 		size_t WorkStackSize() { return workstack.size(); }
 		Value& WorkStackAt(int index) { return workstack[index]; }
+
+		void* GetTag() const { return tag; }
+		void* SetTag(void* new_tag) { auto old = tag; tag = new_tag; return old; }
 	};
 
 
@@ -374,7 +379,7 @@ namespace Script {
 		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
 		/// <returns>CodeProviderインスタンス</returns>
 		CodeProvider::Ptr FromCodeSet(const Code* codes, size_t codes_length,
-			                                      const std::unordered_map<std::string, int>& entrypoints);
+			const std::unordered_map<std::string, int>& entrypoints);
 
 		/// <summary>
 		/// Codeの配列からCodeProviderインスタンスを作成し返す
@@ -390,7 +395,7 @@ namespace Script {
 		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
 		/// <returns>CodeProviderインスタンス</returns>
 		CodeProvider::Ptr FromCodeSet(const std::vector<Code>& codes,
-                                                  const std::unordered_map<std::string, int>& entrypoints);
+			const std::unordered_map<std::string, int>& entrypoints);
 
 		/// <summary>
 		/// Codeの配列からCodeProviderインスタンスを作成し返す
@@ -406,12 +411,12 @@ namespace Script {
 		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
 		/// <returns>CodeProviderインスタンス</returns>
 		CodeProvider::Ptr FromCodeSet(std::vector<Code>&& codes,
-												  std::unordered_map<std::string, int>&& entrypoints);
+			std::unordered_map<std::string, int>&& entrypoints);
 
-		
+
 		CodeProvider::Ptr FromCodeSet(const CodeUnit* codes, size_t codes_length);
 
-		
+
 		class Builder {
 			std::vector<Code> code_array;
 			std::vector<std::string> string_table;
@@ -469,7 +474,7 @@ namespace Script {
 			Builder& operator ()(Opcode op);
 			Builder& operator ()(Opcode op, Code::Attribute attr);
 			Builder& operator ()(Opcode op, const std::string& attr, bool is_entrypoint = false);
-			
+
 
 			// 現在の位置にラベルを追加
 			Builder& operator [](const std::string& label_name);

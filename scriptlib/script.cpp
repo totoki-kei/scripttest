@@ -13,7 +13,7 @@ namespace Script {
 	State::State(std::shared_ptr<CodeProvider> p)
 		: provider{ p }
 		, workarea((size_t)8)
-		, registry{ nullptr } {};
+		, tag{ nullptr } {};
 
 	std::shared_ptr<Thread> State::CreateThread(int ent) {
 		return std::make_shared<Thread>(shared_from_this(), ent);
@@ -32,7 +32,8 @@ namespace Script {
 		, codeindex{ ent }
 		, waitcount{ 0 }
 		, errorCode{ ErrorType::OK }
-		, stackBase{ 0 } {}
+		, stackBase{ 0 }
+		, tag{ nullptr } {}
 
 	ReturnState Thread::Run(bool nowait) {
 		if (errorCode != ErrorType::OK)

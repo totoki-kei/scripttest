@@ -221,11 +221,13 @@ st[" f f f"]
 st[eee]
 )";
 			Loader::Generator gen;
-			gen.map["st"] = { [&result](Thread& th, const Code& c) {
-				result.push_back({ c.attr.int_, th.GetCodeProvider()->GetString(c.attr.int_) });
+
+			gen.codeMap["st"] = { [](Thread& th, const Code& c) {
+				auto result_ptr = static_cast<std::vector< std::pair<int, const char*> >*>(th.GetState()->At(0).ptr_);
+				result_ptr->push_back({ c.attr.int_, th.GetCodeProvider()->GetString(c.attr.int_) });
 				return None;
 			}, Loader::AttrType::String };
-		
+
 
 			auto cp = Loader::FromString(source, gen);
 
@@ -237,9 +239,11 @@ st[eee]
 			Assert::AreEqual((std::string)"eee", (std::string)cp->GetString(4), L"index 4");
 			Assert::AreEqual((std::string)" f f f", (std::string)cp->GetString(5), L"index 5");
 			Assert::AreEqual((const char*)nullptr, cp->GetString(6), L"index 6");
-
+			
 			auto state = cp->CreateState();
+			state->At(0).ptr_ = &result;
 			auto thread = state->CreateThread();
+			//thread->SetTag(&result);
 
 			auto ret = thread->Run();
 
