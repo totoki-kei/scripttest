@@ -60,48 +60,42 @@ static const Script::Code codes[]{
 //	{ S::opVsto, 1 },
 //};
 
-static class Codes3 {
-public:
+S::CodeProvider::Ptr GetCodes3() {
 	SL::Builder builder;
 
-	Codes3() {
-		// script.txtと同等のコード
-		builder
-			.push(0).set(1)
-			(nullptr, 1)
-			.get(1).wait()
-			.push(10).push(20).push(30).call("ppp")
-			.push(40).push(50).push(60).call("ppp")
-			.push(5).add()(opPrint)
-			.adds(3).call("ppp")
-			.clear()
+	builder
+		.push(0).set(1)
+	[1]	.get(1).wait()
+		.push(10).push(20).push(30).call("ppp")
+		.push(40).push(50).push(60).call("ppp")
+		.push(5).add()(opPrint)
+		.adds(3).call("ppp")
+		.clear()
 
-			.get(1).add(1.0).set(1)
-			.get(1).push(3).jump_lt(1).end().rew(1)
+		.get(1).add(1.0).set(1)
+		.get(1).push(3).jump_lt(1).end().rew(1)
 
-			["ppp"]
-			(opPrint, "stack trace")
-			.ret()
+	["ppp"]
+		(opPrint, "stack trace")
+		.ret()
 
-			["speedtest"]
-			.push(1)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-				.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-			(opPrint, "result")
-			.end()
+	["speedtest"]
+		.push(1)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		(opPrint, "result")
+		.end()
 		;
-	}
 
-
-} codes3;
-
+	return builder.MakeCodeProvider();
+}
 
 #include <Windows.h>
 
@@ -125,9 +119,9 @@ int main(int argc, char* argv[])
 	// 命令を追加
 	gen.codeMap["print"] = { opPrint, SL::AttrType::String };
 
-	auto prov = SL::Load("script.txt", gen); // スクリプトファイルからコード列を取得
+	//auto prov = SL::Load("script.txt", gen); // スクリプトファイルからコード列を取得
 	//auto prov = SL::FromCodeSet(codes, _countof(codes)); // Codeの配列からコード列を取得
-	//auto prov = codes3.builder.MakeCodeProvider(); // Builderからコード列を取得
+	auto prov = GetCodes3(); // Builderからコード列を取得
 
 	// 状態とスレッドの作成
 	auto st = prov->CreateState();

@@ -516,5 +516,11 @@ namespace Script { namespace Loader {
 		return *this;
 	}
 
+	Builder& Builder::operator [](int checkpoint_id) {
+		code_array.push_back(Code{ nullptr, checkpoint_id });
+		return *this;
+	}
+
+
 }}
 

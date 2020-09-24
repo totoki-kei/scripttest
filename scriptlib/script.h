@@ -473,6 +473,8 @@ namespace Script {
 
 			// 現在の位置にラベルを追加
 			Builder& operator [](const std::string& label_name);
+			// 現在の位置にチェックポイントを追加
+			Builder& operator [](int);
 
 
 		};
