@@ -414,15 +414,15 @@ namespace Script { namespace Loader {
 		return CodeProvider::Ptr{ std::move(ret) };
 	}
 
-#define MAKEOP(name, op, attr) void BuilderCore::make_ ## name ( Code::Attribute operand ) { make_op(op, operand); }
-#define MAKEOP_INT(name, op) void BuilderCore::make_ ## name ( int operand ) { make_op(op, operand); } void BuilderCore::make_ ## name () { make_op(op); }
-#define MAKEOP_FLOAT(name, op) void BuilderCore::make_ ## name ( float operand ) { make_op(op, operand); }  void BuilderCore::make_ ## name () { make_op(op); }
-#define MAKEOP_CMP(name, op) void BuilderCore::make_ ## name ( ComparerAttribute operand ) { make_op(op, operand); }
-#define MAKEOP_NT(name, op) void BuilderCore::make_ ## name ( NumTypeAttribute operand ) { make_op(op, operand); }
-#define MAKEOP_ENTRYPOINT(name, op) void BuilderCore::make_ ## name ( const std::string& entrypoint_name ) { make_op(op, entrypoint_name, true); } void BuilderCore::make_ ## name () { make_op(op); }
-#define MAKEOP_PROP(name, op) void BuilderCore::make_ ## name ( PropertyAttribute direction ) { make_op(op, direction); }
-#define MAKEOP_STR(name, op) void BuilderCore::make_ ## name ( const std::string& str ) { make_op(op, str, false); } void BuilderCore::make_ ## name () { make_op(op); }
-#define MAKEOP_UNIT(name, op) void BuilderCore::make_ ## name () { make_op(op); }
+#define MAKEOP(name, op, attr) void BuilderCore::emit_ ## name ( Code::Attribute operand ) { emit_op(op, operand); }
+#define MAKEOP_INT(name, op) void BuilderCore::emit_ ## name ( int operand ) { emit_op(op, operand); } void BuilderCore::emit_ ## name () { emit_op(op); }
+#define MAKEOP_FLOAT(name, op) void BuilderCore::emit_ ## name ( float operand ) { emit_op(op, operand); }  void BuilderCore::emit_ ## name () { emit_op(op); }
+#define MAKEOP_CMP(name, op) void BuilderCore::emit_ ## name ( ComparerAttribute operand ) { emit_op(op, operand); }
+#define MAKEOP_NT(name, op) void BuilderCore::emit_ ## name ( NumTypeAttribute operand ) { emit_op(op, operand); }
+#define MAKEOP_ENTRYPOINT(name, op) void BuilderCore::emit_ ## name ( const std::string& entrypoint_name ) { emit_op(op, entrypoint_name, true); } void BuilderCore::emit_ ## name () { emit_op(op); }
+#define MAKEOP_PROP(name, op) void BuilderCore::emit_ ## name ( PropertyAttribute direction ) { emit_op(op, direction); }
+#define MAKEOP_STR(name, op) void BuilderCore::emit_ ## name ( const std::string& str ) { emit_op(op, str, false); } void BuilderCore::emit_ ## name () { emit_op(op); }
+#define MAKEOP_UNIT(name, op) void BuilderCore::emit_ ## name () { emit_op(op); }
 
 #include "scriptOp.inl"
 
@@ -455,17 +455,17 @@ namespace Script { namespace Loader {
 		entrypoints.emplace(name, pos);
 	}
 
-	void BuilderCore::make_op(Opcode op) {
+	void BuilderCore::emit_op(Opcode op) {
 		code_array.emplace_back(Code{ op });
 		
 	}
 
-	void BuilderCore::make_op(Opcode op, Code::Attribute attr) {
+	void BuilderCore::emit_op(Opcode op, Code::Attribute attr) {
 		code_array.emplace_back(Code{ op, attr });
 		
 	}
 
-	void BuilderCore::make_op(Opcode op, const std::string& attr, bool is_entrypoint) {
+	void BuilderCore::emit_op(Opcode op, const std::string& attr, bool is_entrypoint) {
 		if (is_entrypoint) {
 			if (attr.empty()) {
 				// スタックトップを使用する方式
@@ -498,7 +498,7 @@ namespace Script { namespace Loader {
 		
 	}
 
-	void BuilderCore::make_label(const std::string& label_name) {
+	void BuilderCore::emit_label(const std::string& label_name) {
 		auto index = (int)code_array.size();
 		entrypoints.emplace(label_name, index);
 
@@ -516,7 +516,7 @@ namespace Script { namespace Loader {
 		
 	}
 
-	void BuilderCore::make_checkpoint(int checkpoint_id) {
+	void BuilderCore::emit_checkpoint(int checkpoint_id) {
 		code_array.push_back(Code{ nullptr, checkpoint_id });
 		
 	}

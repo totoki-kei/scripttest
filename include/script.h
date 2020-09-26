@@ -436,15 +436,15 @@ namespace Script {
 
 		protected:
 
-#define MAKEOP(name, op, attr) void make_##name ( Code::Attribute operand );
-#define MAKEOP_INT(name, op) void make_##name ( int operand ); void make_##name();
-#define MAKEOP_FLOAT(name, op) void make_##name ( float operand ); void make_##name();
-#define MAKEOP_CMP(name, op) void make_##name( ComparerAttribute operand );
-#define MAKEOP_NT(name, op) void make_##name( NumTypeAttribute operand );
-#define MAKEOP_ENTRYPOINT(name, op) void make_##name( const std::string& entrypoint_name ); void make_##name();
-#define MAKEOP_PROP(name, op) void make_##name( PropertyAttribute direction );
-#define MAKEOP_STR(name, op) void make_##name( const std::string& str ); void make_##name();
-#define MAKEOP_UNIT(name, op) void make_##name();
+#define MAKEOP(name, op, attr) void emit_##name ( Code::Attribute operand );
+#define MAKEOP_INT(name, op) void emit_##name ( int operand ); void emit_##name();
+#define MAKEOP_FLOAT(name, op) void emit_##name ( float operand ); void emit_##name();
+#define MAKEOP_CMP(name, op) void emit_##name( ComparerAttribute operand );
+#define MAKEOP_NT(name, op) void emit_##name( NumTypeAttribute operand );
+#define MAKEOP_ENTRYPOINT(name, op) void emit_##name( const std::string& entrypoint_name ); void emit_##name();
+#define MAKEOP_PROP(name, op) void emit_##name( PropertyAttribute direction );
+#define MAKEOP_STR(name, op) void emit_##name( const std::string& str ); void emit_##name();
+#define MAKEOP_UNIT(name, op) void emit_##name();
 
 #include "scriptOp.inl"
 
@@ -474,15 +474,15 @@ namespace Script {
 			void AddEntryPoint(const std::string& name, int pos);
 
 
-			void make_op(Opcode op);
-			void make_op(Opcode op, Code::Attribute attr);
-			void make_op(Opcode op, const std::string& attr, bool is_entrypoint = false);
+			void emit_op(Opcode op);
+			void emit_op(Opcode op, Code::Attribute attr);
+			void emit_op(Opcode op, const std::string& attr, bool is_entrypoint = false);
 
 
 			// 現在の位置にラベルを追加
-			void make_label(const std::string& label_name);
+			void emit_label(const std::string& label_name);
 			// 現在の位置にチェックポイントを追加
-			void make_checkpoint(int);
+			void emit_checkpoint(int);
 
 
 		};
@@ -507,35 +507,35 @@ namespace Script {
 			}
 
 #define MAKEOP(name, op, attr) \
-	DerivT& name ( Code::Attribute operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( Code::Attribute operand ) { emit_##name(operand); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_INT(name, op) \
-	DerivT& name ( int operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); } \
-	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( int operand ) { emit_##name(operand); return *reinterpret_cast<DerivT*>(this); } \
+	DerivT& name () { emit_##name(); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_FLOAT(name, op) \
-	DerivT& name ( float operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); } \
-	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( float operand ) { emit_##name(operand); return *reinterpret_cast<DerivT*>(this); } \
+	DerivT& name () { emit_##name(); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_CMP(name, op) \
-	DerivT& name ( ComparerAttribute operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( ComparerAttribute operand ) { emit_##name(operand); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_NT(name, op) \
-	DerivT& name ( NumTypeAttribute operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( NumTypeAttribute operand ) { emit_##name(operand); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_ENTRYPOINT(name, op) \
-	DerivT& name ( const std::string& entrypoint_name ) { make_##name(entrypoint_name); return *reinterpret_cast<DerivT*>(this); } \
-	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( const std::string& entrypoint_name ) { emit_##name(entrypoint_name); return *reinterpret_cast<DerivT*>(this); } \
+	DerivT& name () { emit_##name(); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_PROP(name, op) \
-	DerivT& name ( PropertyAttribute direction )  { make_##name(direction); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( PropertyAttribute direction )  { emit_##name(direction); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_STR(name, op) \
-	DerivT& name ( const std::string& str );  { make_##name(str); return *reinterpret_cast<DerivT*>(this); }\
-	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name ( const std::string& str );  { emit_##name(str); return *reinterpret_cast<DerivT*>(this); }\
+	DerivT& name () { emit_##name(); return *reinterpret_cast<DerivT*>(this); }
 
 #define MAKEOP_UNIT(name, op) \
-	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+	DerivT& name () { emit_##name(); return *reinterpret_cast<DerivT*>(this); }
 
 #include "scriptOp.inl"
 
@@ -550,22 +550,22 @@ namespace Script {
 #undef MAKEOP
 
 			DerivT& operator ()(Opcode op) {
-				this->make_op(op); return *reinterpret_cast<DerivT*>(this);
+				this->emit_op(op); return *reinterpret_cast<DerivT*>(this);
 			}
 			DerivT& operator ()(Opcode op, Code::Attribute attr) {
-				this->make_op(op, attr); return *reinterpret_cast<DerivT*>(this);
+				this->emit_op(op, attr); return *reinterpret_cast<DerivT*>(this);
 			}
 			DerivT& operator ()(Opcode op, const std::string& attr, bool is_entrypoint = false) {
-				this->make_op(op, attr, is_entrypoint); return *reinterpret_cast<DerivT*>(this);
+				this->emit_op(op, attr, is_entrypoint); return *reinterpret_cast<DerivT*>(this);
 			}
 
 
 			DerivT& operator [](const std::string& label_name) {
-				this->make_label(label_name);
+				this->emit_label(label_name);
 				return *reinterpret_cast<DerivT*>(this);
 			}
 			DerivT& operator [](int checkpoint_id) {
-				this->make_checkpoint(checkpoint_id);
+				this->emit_checkpoint(checkpoint_id);
 				return *reinterpret_cast<DerivT*>(this);
 			}
 
