@@ -61,7 +61,7 @@ static const Script::Code codes[]{
 //};
 
 S::CodeProvider::Ptr GetCodes3() {
-	SL::Builder builder;
+	SL::BasicBuilder builder;
 
 	builder
 		.push(0).set(1)
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
 
 	//auto prov = SL::Load("script.txt", gen); // スクリプトファイルからコード列を取得
 	//auto prov = SL::FromCodeSet(codes, _countof(codes)); // Codeの配列からコード列を取得
-	auto prov = GetCodes3(); // Builderからコード列を取得
+	auto prov = GetCodes3(); // BuilderCoreからコード列を取得
 
 	// 状態とスレッドの作成
 	auto st = prov->CreateState();

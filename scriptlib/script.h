@@ -379,7 +379,7 @@ namespace Script {
 		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
 		/// <returns>CodeProviderインスタンス</returns>
 		CodeProvider::Ptr FromCodeSet(const Code* codes, size_t codes_length,
-			const std::unordered_map<std::string, int>& entrypoints);
+			                                      const std::unordered_map<std::string, int>& entrypoints);
 
 		/// <summary>
 		/// Codeの配列からCodeProviderインスタンスを作成し返す
@@ -395,7 +395,7 @@ namespace Script {
 		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
 		/// <returns>CodeProviderインスタンス</returns>
 		CodeProvider::Ptr FromCodeSet(const std::vector<Code>& codes,
-			const std::unordered_map<std::string, int>& entrypoints);
+                                                  const std::unordered_map<std::string, int>& entrypoints);
 
 		/// <summary>
 		/// Codeの配列からCodeProviderインスタンスを作成し返す
@@ -411,13 +411,14 @@ namespace Script {
 		/// <param name="entrypoints">エントリポイント名とインデックスの辞書</param>
 		/// <returns>CodeProviderインスタンス</returns>
 		CodeProvider::Ptr FromCodeSet(std::vector<Code>&& codes,
-			std::unordered_map<std::string, int>&& entrypoints);
+												  std::unordered_map<std::string, int>&& entrypoints);
 
-
+		
 		CodeProvider::Ptr FromCodeSet(const CodeUnit* codes, size_t codes_length);
 
 
-		class Builder {
+		class BuilderCore {
+		protected:
 			std::vector<Code> code_array;
 			std::vector<std::string> string_table;
 			std::unordered_map<std::string, int> entrypoints;
@@ -429,19 +430,21 @@ namespace Script {
 			std::vector<DifferedBind> differed_bind_list;
 
 		public:
-			Builder();
+			BuilderCore();
 
 			CodeProvider::Ptr MakeCodeProvider() const;
 
-#define MAKEOP(name, op, attr) Builder& name ( Code::Attribute operand );
-#define MAKEOP_INT(name, op) Builder& name ( int operand ); Builder& name ();
-#define MAKEOP_FLOAT(name, op) Builder& name ( float operand ); Builder& name ();
-#define MAKEOP_CMP(name, op) Builder& name ( ComparerAttribute operand );
-#define MAKEOP_NT(name, op) Builder& name ( NumTypeAttribute operand );
-#define MAKEOP_ENTRYPOINT(name, op) Builder& name ( const std::string& entrypoint_name ); Builder& Builder:: ## name ();
-#define MAKEOP_PROP(name, op) Builder& name ( PropertyAttribute direction );
-#define MAKEOP_STR(name, op) Builder& name ( const std::string& str ); Builder& name ();
-#define MAKEOP_UNIT(name, op) Builder& name ();
+		protected:
+
+#define MAKEOP(name, op, attr) void make_##name ( Code::Attribute operand );
+#define MAKEOP_INT(name, op) void make_##name ( int operand ); void make_##name();
+#define MAKEOP_FLOAT(name, op) void make_##name ( float operand ); void make_##name();
+#define MAKEOP_CMP(name, op) void make_##name( ComparerAttribute operand );
+#define MAKEOP_NT(name, op) void make_##name( NumTypeAttribute operand );
+#define MAKEOP_ENTRYPOINT(name, op) void make_##name( const std::string& entrypoint_name ); void make_##name();
+#define MAKEOP_PROP(name, op) void make_##name( PropertyAttribute direction );
+#define MAKEOP_STR(name, op) void make_##name( const std::string& str ); void make_##name();
+#define MAKEOP_UNIT(name, op) void make_##name();
 
 #include "scriptOp.inl"
 
@@ -471,18 +474,107 @@ namespace Script {
 			void AddEntryPoint(const std::string& name, int pos);
 
 
-			Builder& operator ()(Opcode op);
-			Builder& operator ()(Opcode op, Code::Attribute attr);
-			Builder& operator ()(Opcode op, const std::string& attr, bool is_entrypoint = false);
+			void make_op(Opcode op);
+			void make_op(Opcode op, Code::Attribute attr);
+			void make_op(Opcode op, const std::string& attr, bool is_entrypoint = false);
 
 
 			// 現在の位置にラベルを追加
-			Builder& operator [](const std::string& label_name);
+			void make_label(const std::string& label_name);
 			// 現在の位置にチェックポイントを追加
-			Builder& operator [](int);
+			void make_checkpoint(int);
 
 
 		};
+
+		template <typename DerivT>
+		class Builder : BuilderCore {
+			std::vector<Code> code_array;
+			std::vector<std::string> string_table;
+			std::unordered_map<std::string, int> entrypoints;
+
+			struct DifferedBind {
+				size_t index;
+				std::string entrypoint_name;
+			};
+			std::vector<DifferedBind> differed_bind_list;
+
+		public:
+			Builder() : BuilderCore() {}
+
+			CodeProvider::Ptr MakeCodeProvider() const {
+				return BuilderCore::MakeCodeProvider();
+			}
+
+#define MAKEOP(name, op, attr) \
+	DerivT& name ( Code::Attribute operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_INT(name, op) \
+	DerivT& name ( int operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); } \
+	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_FLOAT(name, op) \
+	DerivT& name ( float operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); } \
+	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_CMP(name, op) \
+	DerivT& name ( ComparerAttribute operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_NT(name, op) \
+	DerivT& name ( NumTypeAttribute operand ) { make_##name(operand); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_ENTRYPOINT(name, op) \
+	DerivT& name ( const std::string& entrypoint_name ) { make_##name(entrypoint_name); return *reinterpret_cast<DerivT*>(this); } \
+	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_PROP(name, op) \
+	DerivT& name ( PropertyAttribute direction )  { make_##name(direction); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_STR(name, op) \
+	DerivT& name ( const std::string& str );  { make_##name(str); return *reinterpret_cast<DerivT*>(this); }\
+	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+
+#define MAKEOP_UNIT(name, op) \
+	DerivT& name () { make_##name(); return *reinterpret_cast<DerivT*>(this); }
+
+#include "scriptOp.inl"
+
+#undef MAKEOP_UNIT
+#undef MAKEOP_STR
+#undef MAKEOP_PROP
+#undef MAKEOP_ENTRYPOINT
+#undef MAKEOP_NT
+#undef MAKEOP_CMP
+#undef MAKEOP_FLOAT
+#undef MAKEOP_INT
+#undef MAKEOP
+
+			DerivT& operator ()(Opcode op) {
+				this->make_op(op); return *reinterpret_cast<DerivT*>(this);
+			}
+			DerivT& operator ()(Opcode op, Code::Attribute attr) {
+				this->make_op(op, attr); return *reinterpret_cast<DerivT*>(this);
+			}
+			DerivT& operator ()(Opcode op, const std::string& attr, bool is_entrypoint = false) {
+				this->make_op(op, attr, is_entrypoint); return *reinterpret_cast<DerivT*>(this);
+			}
+
+
+			DerivT& operator [](const std::string& label_name) {
+				this->make_label(label_name);
+				return *reinterpret_cast<DerivT*>(this);
+			}
+			DerivT& operator [](int checkpoint_id) {
+				this->make_checkpoint(checkpoint_id);
+				return *reinterpret_cast<DerivT*>(this);
+			}
+
+
+		};
+
+		class BasicBuilder : public Builder<BasicBuilder> {};
+
+
 	}
 }
 

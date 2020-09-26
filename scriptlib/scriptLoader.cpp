@@ -400,9 +400,9 @@ namespace Script { namespace Loader {
 		return true;
 	}
 
-	Builder::Builder() {}
+	BuilderCore::BuilderCore() {}
 
-	CodeProvider::Ptr Builder::MakeCodeProvider() const {
+	CodeProvider::Ptr BuilderCore::MakeCodeProvider() const {
 		auto ret = std::make_unique<SimpleCodeProvider>();
 
 		// TODO: ここに未解決のバインドが残っていたときのエラー処理を記述
@@ -414,15 +414,15 @@ namespace Script { namespace Loader {
 		return CodeProvider::Ptr{ std::move(ret) };
 	}
 
-#define MAKEOP(name, op, attr) Builder& Builder:: ## name ( Code::Attribute operand ) { return (*this)(op, operand); }
-#define MAKEOP_INT(name, op) Builder& Builder:: ## name ( int operand ) { return (*this)(op, operand); } Builder& Builder:: ## name () { return (*this)(op); }
-#define MAKEOP_FLOAT(name, op) Builder& Builder:: ## name ( float operand ) { return (*this)(op, operand); }  Builder& Builder:: ## name () { return (*this)(op); }
-#define MAKEOP_CMP(name, op) Builder& Builder:: ## name ( ComparerAttribute operand ) { return (*this)(op, operand); }
-#define MAKEOP_NT(name, op) Builder& Builder:: ## name ( NumTypeAttribute operand ) { return (*this)(op, operand); }
-#define MAKEOP_ENTRYPOINT(name, op) Builder& Builder:: ## name ( const std::string& entrypoint_name ) { return (*this)(op, entrypoint_name, true); } Builder& Builder:: ## name () { return (*this)(op); }
-#define MAKEOP_PROP(name, op) Builder& Builder:: ## name ( PropertyAttribute direction ) { return (*this)(op, direction); }
-#define MAKEOP_STR(name, op) Builder& Builder:: ## name ( const std::string& str ) { return (*this)(op, str, false); } Builder& Builder:: ## name () { return (*this)(op); }
-#define MAKEOP_UNIT(name, op) Builder& Builder:: ## name () { return (*this)(op); }
+#define MAKEOP(name, op, attr) void BuilderCore::make_ ## name ( Code::Attribute operand ) { make_op(op, operand); }
+#define MAKEOP_INT(name, op) void BuilderCore::make_ ## name ( int operand ) { make_op(op, operand); } void BuilderCore::make_ ## name () { make_op(op); }
+#define MAKEOP_FLOAT(name, op) void BuilderCore::make_ ## name ( float operand ) { make_op(op, operand); }  void BuilderCore::make_ ## name () { make_op(op); }
+#define MAKEOP_CMP(name, op) void BuilderCore::make_ ## name ( ComparerAttribute operand ) { make_op(op, operand); }
+#define MAKEOP_NT(name, op) void BuilderCore::make_ ## name ( NumTypeAttribute operand ) { make_op(op, operand); }
+#define MAKEOP_ENTRYPOINT(name, op) void BuilderCore::make_ ## name ( const std::string& entrypoint_name ) { make_op(op, entrypoint_name, true); } void BuilderCore::make_ ## name () { make_op(op); }
+#define MAKEOP_PROP(name, op) void BuilderCore::make_ ## name ( PropertyAttribute direction ) { make_op(op, direction); }
+#define MAKEOP_STR(name, op) void BuilderCore::make_ ## name ( const std::string& str ) { make_op(op, str, false); } void BuilderCore::make_ ## name () { make_op(op); }
+#define MAKEOP_UNIT(name, op) void BuilderCore::make_ ## name () { make_op(op); }
 
 #include "scriptOp.inl"
 
@@ -436,7 +436,7 @@ namespace Script { namespace Loader {
 #undef MAKEOP_INT
 #undef MAKEOP
 
-	int Builder::AddString(const std::string& str) {
+	int BuilderCore::AddString(const std::string& str) {
 		auto it = std::find(string_table.rbegin(), string_table.rend(), str);
 		if (it != string_table.rend()) {
 			// 同一インデックスを返す
@@ -451,21 +451,21 @@ namespace Script { namespace Loader {
 		}
 	}
 
-	void Builder::AddEntryPoint(const std::string& name, int pos) {
+	void BuilderCore::AddEntryPoint(const std::string& name, int pos) {
 		entrypoints.emplace(name, pos);
 	}
 
-	Builder& Builder::operator()(Opcode op) {
+	void BuilderCore::make_op(Opcode op) {
 		code_array.emplace_back(Code{ op });
-		return *this;
+		
 	}
 
-	Builder& Builder::operator()(Opcode op, Code::Attribute attr) {
+	void BuilderCore::make_op(Opcode op, Code::Attribute attr) {
 		code_array.emplace_back(Code{ op, attr });
-		return *this;
+		
 	}
 
-	Builder& Builder::operator ()(Opcode op, const std::string& attr, bool is_entrypoint) {
+	void BuilderCore::make_op(Opcode op, const std::string& attr, bool is_entrypoint) {
 		if (is_entrypoint) {
 			if (attr.empty()) {
 				// スタックトップを使用する方式
@@ -495,10 +495,10 @@ namespace Script { namespace Loader {
 			code_array.emplace_back(op, str_index);
 		}
 
-		return *this;
+		
 	}
 
-	Builder& Builder::operator [](const std::string& label_name) {
+	void BuilderCore::make_label(const std::string& label_name) {
 		auto index = (int)code_array.size();
 		entrypoints.emplace(label_name, index);
 
@@ -513,12 +513,12 @@ namespace Script { namespace Loader {
 			}
 		}
 
-		return *this;
+		
 	}
 
-	Builder& Builder::operator [](int checkpoint_id) {
+	void BuilderCore::make_checkpoint(int checkpoint_id) {
 		code_array.push_back(Code{ nullptr, checkpoint_id });
-		return *this;
+		
 	}
 
 
