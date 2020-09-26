@@ -60,15 +60,27 @@ static const Script::Code codes[]{
 //	{ S::opVsto, 1 },
 //};
 
+
+// “ÆŽ©‚Ì–½—ß‚ð’Ç‰Á‚·‚éBuilder
+class MyBuilder : public SL::Builder<MyBuilder> {
+public:
+	MyBuilder& print(const std::string& description) {
+		return (*this)(opPrint, description, false);
+	}
+	MyBuilder& print() {
+		return (*this)(opPrint);
+	}
+};
+
 S::CodeProvider::Ptr GetCodes3() {
-	SL::BasicBuilder builder;
+	MyBuilder builder;
 
 	builder
 		.push(0).set(1)
 	[1]	.get(1).wait()
 		.push(10).push(20).push(30).call("ppp")
 		.push(40).push(50).push(60).call("ppp")
-		.push(5).add()(opPrint)
+		.push(5).add().print()
 		.adds(3).call("ppp")
 		.clear()
 
@@ -76,7 +88,7 @@ S::CodeProvider::Ptr GetCodes3() {
 		.get(1).push(3).jump_lt(1).end().rew(1)
 
 	["ppp"]
-		(opPrint, "stack trace")
+		.print("stack trace")
 		.ret()
 
 	["speedtest"]
@@ -90,12 +102,13 @@ S::CodeProvider::Ptr GetCodes3() {
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-		(opPrint, "result")
+		.print("result")
 		.end()
 		;
 
 	return builder.MakeCodeProvider();
 }
+
 
 #include <Windows.h>
 
