@@ -70,6 +70,11 @@ public:
 	MyBuilder& print() {
 		return (*this)(opPrint);
 	}
+
+	static void RegisterOpcode(SL::Generator& gen) {
+		// 命令を追加
+		gen.codeMap["print"] = { opPrint, SL::AttrType::String };
+	}
 };
 
 S::CodeProvider::Ptr GetCodes3() {
@@ -77,7 +82,8 @@ S::CodeProvider::Ptr GetCodes3() {
 
 	builder
 		.push(0).set(1)
-	[1]	.get(1).wait()
+	[1]
+		.get(1).wait()
 		.push(10).push(20).push(30).call("ppp")
 		.push(40).push(50).push(60).call("ppp")
 		.push(5).add().print()
@@ -120,17 +126,18 @@ void printT() {
 int main(int argc, char* argv[])
 {
 	// 各データ型のサイズ確認
-	printT<S::Code>();
-	printT<S::State>();
-	printT<S::Thread>();
-	printT<std::vector<S::Code>>();
-
+	{
+		printT<S::Code>();
+		printT<S::State>();
+		printT<S::Thread>();
+		printT<std::vector<S::Code>>();
+	}
 
 	// 文字列からのコード生成に使うジェネレーター
 	SL::Generator gen;
 	
-	// 命令を追加
-	gen.codeMap["print"] = { opPrint, SL::AttrType::String };
+	// print等の追加Opcodeを登録
+	MyBuilder::RegisterOpcode(gen);
 
 	//auto prov = SL::Load("script.txt", gen); // スクリプトファイルからコード列を取得
 	//auto prov = SL::FromCodeSet(codes, _countof(codes)); // Codeの配列からコード列を取得
