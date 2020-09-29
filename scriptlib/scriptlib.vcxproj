@@ -100,7 +100,7 @@
       <Command>copy /Y script.h $(SolutionDir)include\.
 copy /Y scriptOp.h $(SolutionDir)include\.
 copy /Y scriptOp.inl $(SolutionDir)include\.
-attrib +R $(SolutionDir)*.*</Command>
+attrib +R $(SolutionDir)include\*.*</Command>
     </CustomBuildStep>
     <CustomBuildStep>
       <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
@@ -128,7 +128,7 @@ attrib +R $(SolutionDir)*.*</Command>
       <Command>copy /Y script.h $(SolutionDir)include\.
 copy /Y scriptOp.h $(SolutionDir)include\.
 copy /Y scriptOp.inl $(SolutionDir)include\.
-attrib +R $(SolutionDir)*.*</Command>
+attrib +R $(SolutionDir)include\*.*</Command>
     </CustomBuildStep>
     <CustomBuildStep>
       <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
@@ -160,7 +160,7 @@ attrib +R $(SolutionDir)*.*</Command>
       <Command>copy /Y script.h $(SolutionDir)include\.
 copy /Y scriptOp.h $(SolutionDir)include\.
 copy /Y scriptOp.inl $(SolutionDir)include\.
-attrib +R $(SolutionDir)*.*</Command>
+attrib +R $(SolutionDir)include\*.*</Command>
       <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
       <Inputs>script.h;scriptOp.h;scriptOp.inl;%(Inputs)</Inputs>
     </CustomBuildStep>
@@ -186,7 +186,7 @@ attrib +R $(SolutionDir)*.*</Command>
       <Command>copy /Y script.h $(SolutionDir)include\.
 copy /Y scriptOp.h $(SolutionDir)include\.
 copy /Y scriptOp.inl $(SolutionDir)include\.
-attrib +R $(SolutionDir)*.*</Command>
+attrib +R $(SolutionDir)include\*.*</Command>
       <Outputs>$(SolutionDir)include\script.h;$(SolutionDir)include\scriptOp.h;$(SolutionDir)include\scriptOp.inl;%(Outputs)</Outputs>
       <Inputs>script.h;scriptOp.h;scriptOp.inl;%(Inputs)</Inputs>
     </CustomBuildStep>
