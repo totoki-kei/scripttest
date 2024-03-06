@@ -99,6 +99,7 @@ S::CodeProvider::Ptr GetCodes3() {
 
 	["speedtest"]
 		.push(1)
+	[2]
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
@@ -108,8 +109,11 @@ S::CodeProvider::Ptr GetCodes3() {
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
 		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
-		.print("result")
-		.end()
+		.add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0).add(1.0)
+		//.print("result")
+		.wait()
+		.rew(2)
+		//.end()
 		;
 
 	return builder.MakeCodeProvider();
@@ -145,7 +149,7 @@ int main(int argc, char* argv[])
 
 	// ó‘Ô‚ÆƒXƒŒƒbƒh‚Ìì¬
 	auto st = prov->CreateState();
-	auto th = st->CreateThread();
+	auto th = st->CreateThread("speedtest");
 
 	std::cout << "-------- Start --------" << std::endl;
 	auto start = GetTickCount64();

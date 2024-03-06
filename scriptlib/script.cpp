@@ -23,6 +23,13 @@ namespace Script {
 		return std::make_shared<Thread>(shared_from_this(), provider->Label(ent));
 	}
 
+	Value& State::At(int index) {
+		if (index <= 256 && index >= (int)workarea.size()) {
+			workarea.resize(index + 1);
+		}
+		return workarea[index];
+	}
+
 	void State::Reset() {
 		workarea.clear();
 	}

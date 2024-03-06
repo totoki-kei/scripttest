@@ -188,12 +188,7 @@ namespace Script {
 
 		CodeProvider* GetCodeProvider() { return provider.get(); }
 
-		Value& At(int index) {
-			if (index <= 256 && index >= (int)workarea.size()) {
-				workarea.resize(index + 1);
-			}
-			return workarea[index];
-		}
+		Value& At(int index);
 		size_t Count() { return workarea.size(); }
 
 		void* GetTag() const { return tag; }
