@@ -49,7 +49,11 @@ public:
 struct data_variant;
 using variant_list = std::vector<data_variant>;
 using variant_dictionary = std::unordered_map<std::string, data_variant>;
-using data_variant_base = std::variant<nullptr_t, int, double, std::string, variant_list, variant_dictionary>;
+
+using variant_list_ptr = std::shared_ptr<variant_list>;
+using variant_dictionary_ptr = std::shared_ptr<variant_dictionary>;
+
+using data_variant_base = std::variant<nullptr_t, int, double, std::string, variant_list_ptr, variant_dictionary_ptr>;
 
 struct data_variant : data_variant_base {
 	// inherit base type constructor
@@ -102,76 +106,141 @@ void excecute_line(const code_cache& code_cache, execution_status& stat) {
 }
 
 
+variant_list_ptr make_variant_list() {
+	return std::make_shared<variant_list>();
+}
+variant_list_ptr make_variant_list(std::initializer_list<variant_list::value_type>&& list) {
+	return std::make_shared<variant_list>(list);
+}
+variant_list_ptr make_variant_list(const variant_list_ptr& list) {
+	return list ? std::make_shared<variant_list>(*list) : std::make_shared<variant_list>();
+}
+variant_list_ptr make_variant_list(variant_list_ptr&& list) {
+	return std::move(list);
+}
+variant_list_ptr make_variant_list(const variant_list& list) {
+	return std::make_shared<variant_list>(list);
+}
+variant_list_ptr make_variant_list(variant_list* list, const bool copy = false) {
+	return copy && list ? std::make_shared<variant_list>(*list) : std::shared_ptr<variant_list>(list);
+}
 
+
+variant_dictionary_ptr make_variant_dictionary() {
+	return std::make_shared<variant_dictionary>();
+}
+variant_dictionary_ptr make_variant_dictionary(std::initializer_list<variant_dictionary::value_type>&& list) {
+	return std::make_shared<variant_dictionary>(list);
+}
+variant_dictionary_ptr make_variant_dictionary(const variant_dictionary_ptr& list) {
+	return list ? std::make_shared<variant_dictionary>(*list) : std::make_shared<variant_dictionary>();
+}
+variant_dictionary_ptr make_variant_dictionary(variant_dictionary_ptr&& list) {
+	return std::move(list);
+}
+variant_dictionary_ptr make_variant_dictionary(const variant_dictionary& list) {
+	return std::make_shared<variant_dictionary>(list);
+}
+variant_dictionary_ptr make_variant_dictionary(variant_dictionary* list, const bool copy = false) {
+	return copy && list ? std::make_shared<variant_dictionary>(*list) : std::shared_ptr<variant_dictionary>(list);
+}
+
+
+constexpr size_t data_variant_size = sizeof(data_variant);
+constexpr size_t data_variant_base_size = sizeof(data_variant_base);
 
 
 int main() {
 
 	class variant_printer {
+		size_t indent_num_;
+		std::string indent_;
+		std::string prefix_;
+		std::string suffix_;
 	public:
+		explicit variant_printer(size_t indent, std::string_view prefix, std::string_view suffix) : indent_num_(indent), indent_(indent, ' '), prefix_(prefix), suffix_(suffix) {}
+
 		void operator ()(nullptr_t) const {
-			std::cout << "(nullptr)";
+			std::cout << indent_ << prefix_ << "(nullptr)" << suffix_ << std::endl;
 		}
 
 		void operator()(const int i) const {
-			std::cout << i;
+			std::cout << indent_ << prefix_ << i << suffix_ << std::endl;;
 		}
 
 		void operator()(const double n) const {
-			std::cout << std::fixed << std::setprecision(3) << n;
+			std::cout << indent_ << prefix_ << std::fixed << std::setprecision(3) << n << suffix_ << std::endl;;
 		}
 
 		void operator()(const std::string& s) const {
-			std::cout << "'" << s << "'";
+			std::cout << indent_ << prefix_ << "'" << s << "'" << suffix_ << std::endl;;
 		}
 
-		void operator ()(const variant_list& v) {
-			const char* sep = nullptr;
+		void operator ()(const variant_list_ptr& pl) const {
+			if (pl) {
+				if (const auto& v = *pl; v.empty())
+				{
+					std::cout << indent_ << prefix_ << "[]" << suffix_ << std::endl;
+				}
+				else {
 
-			std::cout << "[ ";
-			for (const auto& e : v) {
-				if (sep) std::cout << sep;
-				std::visit(*this, e);
+					std::cout << indent_ << prefix_ << "[" << std::endl;
+					for (const auto& e : v) {
+						std::visit(variant_printer(indent_num_ + 1, "", ","), e);
+					}
 
-				sep = ", ";
+					std::cout << indent_ << "]" << suffix_ << std::endl;
+				}
+			} else
+			{
+				std::cout << indent_ << prefix_ << "[ (empty list) ]" << suffix_ << std::endl;;
 			}
-			std::cout << " ]";
 		}
 
-		void operator() (const variant_dictionary& d) {
-			const char* sep = nullptr;
-
-			std::cout << "{ ";
-			for (const auto& [key, val] : d) {
-				if (sep) std::cout << sep;
-				std::cout << "'" << key << "': ";
-				std::visit(*this, val);
-
-				sep = ", ";
+		void operator() (const variant_dictionary_ptr& pd) const {
+			if (pd) {
+				if (const auto& d = *pd; d.empty())
+				{
+					std::cout << indent_ << prefix_ << "{}" << suffix_ << std::endl;
+				}
+				else {
+					std::cout << indent_ << prefix_ << "{" << std::endl;
+					for (const auto& [key, val] : d) {
+						std::visit(variant_printer(indent_num_ + 1, "'" + key + "': ", ","), val);
+					}
+					std::cout << indent_ << "}" << suffix_ << std::endl;
+				}
+			} else
+			{
+				std::cout << indent_ << prefix_ << "{ (empty dictionary) }" << suffix_ << std::endl;;
 			}
-			std::cout << " }";
 		}
 	};
 
 	std::cout << sizeof(data_variant) << std::endl;
 
-	data_variant vs = variant_list
-	{
+	data_variant vs = make_variant_list({
 		{ nullptr },
 		{ 10 },
 		{ 2.1 },
 		{ "hoge"s },
-		variant_list{
+		make_variant_list({
 			{11}, {22}, {"hogehoge"}
-		},
-		variant_dictionary{
+		}),
+		make_variant_dictionary({
 			{ "first", 10 },
 			{ "second", "0x02"s },
-			{ "third", variant_list{"this", "is", "a", "pen"}}
-		},
-	};
+			{ "third", make_variant_list({"this", "is", "a", "pen"})}
+		}),
+		"\n",
+		make_variant_list(),
+		make_variant_list(nullptr),
+		"\n",
+		make_variant_dictionary(),
+		make_variant_dictionary(nullptr),
+	});
 
-	std::visit(variant_printer{}, vs);
+	std::visit(variant_printer{0, "", ""}, vs);
 
 #if 0
 	std::fstream fs;
