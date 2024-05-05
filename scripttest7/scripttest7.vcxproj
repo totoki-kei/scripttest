@@ -133,9 +133,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="script_parser.cpp" />
     <ClCompile Include="scripttest7.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="script_parser.h" />
     <ClInclude Include="scripttest7.h" />
     <ClInclude Include="string_manipulation.h" />
   </ItemGroup>
