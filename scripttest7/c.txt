@@ -1,0 +1,53 @@
+.local
+
+radius_:
+	data float
+color_:
+	data color
+
+
+.script
+
+get_radius:
+	ret radius_
+
+set_radius:
+	mov radius_ @1
+	call @0 `CanvasItem.queue_redraw 0
+	ret -
+
+get_color:
+	ret color_
+
+set_color: ; 行の途中からのコメント
+	mov color_ @1
+	call @0 `CanvasItem.queue_redraw 0
+	ret -
+
+; この行はコメント
+
+_draw:
+	call @0 `Node2D.get_transform
+	push radius_
+	push color_
+	call @0 `CanvasItem.draw_circle 3
+	ret -
+
+_to_string:
+	push "クラス\t\"Circle\""
+	ret ^
+
+###
+
+func get_radius:float
+func set_radius:void r:float
+func get_color:color
+func set_color:void c:color
+
+prop radius:float get_radius set_radius
+prop color:color get_color set_color
+
+func [override] _draw:void delta:float
+
+###
+
