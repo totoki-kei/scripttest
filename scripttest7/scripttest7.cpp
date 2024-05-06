@@ -11,6 +11,7 @@
 #include <string>
 
 #include "string_manipulation.h"
+#include "script_parser.h"
 
 
 int main() {
@@ -79,6 +80,10 @@ int main() {
 			
 		}
 	}
+
+	std::cout << std::string(80, '-') << std::endl;
+
+	test_script_parser();
 
 }
 

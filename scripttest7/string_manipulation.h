@@ -52,7 +52,7 @@ std::vector<std::string> tokenize(CharIter const first, CharIter const last) {
 			if (allow_empty || !workarea.empty()) { ret.push_back(workarea); workarea.clear(); }
 		};
 
-	for (auto it = first; it != last || *it != ';'; /* nop */) {
+	for (auto it = first; it != last && *it != ';'; /* nop */) {
 		
 		if (in_escape) {
 			// エスケープ中(最優先)

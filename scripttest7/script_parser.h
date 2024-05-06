@@ -15,6 +15,7 @@ namespace ast {
 	
 	struct Literal {
 		enum {
+			TYPE_INVALID,
 			TYPE_INTEGER,
 			TYPE_FLOAT,
 			TYPE_STRING_SQ,
@@ -23,34 +24,60 @@ namespace ast {
 			TYPE_BOOL,
 		} type;
 
-		int64_t int_value;
-		double float_value;
+		union {
+			int64_t int_value;
+			double float_value;
+		};
 		std::string string_value;
-
+		Literal()
+			: type(TYPE_INVALID)
+			, int_value() {}
 		Literal(int64_t i)
 			: type(TYPE_INTEGER)
-			, int_value(i)
-			, float_value() {}
+			, int_value(i) {}
 		Literal(double f)
 			: type(TYPE_FLOAT)
-			, int_value()
 			, float_value(f) {}
 		Literal(std::string s, char quote_char)
 			: type(quote_char == '"' ? TYPE_STRING_SQ : TYPE_STRING_DQ)
-			, int_value()
 			, float_value()
 			, string_value(s) {}
 		Literal(std::nullptr_t, std::string nil_str)
 			: type(TYPE_NIL)
 			, int_value()
-			, float_value()
 			, string_value(nil_str) {}
 		Literal(bool b)
 			: type(TYPE_BOOL)
-			, int_value(b ? 1 : 0)
-			, float_value() {
+			, int_value(b ? 1 : 0) {}
+
+		// デバッグ用ダミー
+		// 何が入ってくる？
+		template <typename T>
+		Literal(T&& t) {
+			_ASSERT(0);
 		}
 
+
+		Literal& operator =(const Literal& other) = default;
+		Literal& operator =(Literal&& other) = default;
+
+		bool operator==(const Literal& other) const {
+			if (type == other.type) {
+				switch (type) {
+				case TYPE_INTEGER:
+				case TYPE_BOOL:
+					return int_value == other.int_value;
+				case TYPE_FLOAT:
+					return float_value == other.float_value;
+				case TYPE_STRING_SQ:
+				case TYPE_STRING_DQ:
+					return string_value == other.string_value;
+				case TYPE_NIL:
+					return string_value == other.string_value;
+				}
+			}
+			return false;
+		}
 	};
 
 	struct Param {
@@ -63,9 +90,9 @@ namespace ast {
 	struct Annotation {
 
 	};
-
-
 }
+
+
 
 
 
@@ -94,11 +121,11 @@ struct OpcodeDesc {
 	int input_count;
 };
 
-OpcodeDesc descset[] = {
-	{ "ret", 1 },
-	{"data", 1 },
-	{"call", 3 },
-};
+//OpcodeDesc descset[] = {
+//	{ "ret", 1 },
+//	{"data", 1 },
+//	{"call", 3 },
+//};
 
 enum class SegmentType : int32_t {
 	// 無効 / (間接参照)間接参照しない
@@ -146,4 +173,10 @@ struct Entity {
 
 
 std::shared_ptr<Entity> make_entity(const SourceLine* source_line, std::vector<std::string>& tokens);
+
+void test_script_parser();
+
+void test_ident();
+
+
 
