@@ -79,39 +79,71 @@ namespace parser {
 		SA_END;
 	}
 	auto const string_literal_def
-		= lexeme[ lit('"') >> *(char_ - char_('"')) >> lit('"') ][ sa::string_literal_compose("\"")]
-		| lexeme[ lit('\'') >> *(char_ - char_('\'')) >> lit('\'') ][ sa::string_literal_compose("'") ]
-		//= lexeme[
-		//	lit('"')[ SA({ CV = std::string(); }) ] >>
-		//		*( (char_('\\') >> char_)[ SA(SB(CV.push_back(fs::at_c<0>(CA)), CV.push_back(fs::at_c<1>(CA));))]
-		//		 | (char_ - char_('"'))[ SA({ CV.push_back(CA); }) ]
-		//		)
-		//		>> lit('"')]
-		//| lexeme[
-		//	lit('\'')[ SA({ CV = std::string(); }) ] >>
-		//		*((char_('\\') >> char_)[ SA({ CV.append(CA); }) ]
-		//		 | (char_ - char_('\''))[ SA({ CV.push_back(CA); }) ]
-		//		)
-		//		>> lit('\'') ]
+		= lexeme[ '"' >> *(char_ - lit('"')) >> '"']
+		| lexeme[ '\'' >> *(char_ - lit('\'')) >> '\'' ]
 		;
 	BOOST_SPIRIT_DEFINE(string_literal);
 
+	namespace sa {
+		SA_BEGIN(literal_compose_value, ctx)
+			_val(ctx) = ast::Literal(_attr(ctx));
+		SA_END;
+
+		SA_BEGIN(literal_compose_nil, ctx)
+			_val(ctx) = ast::Literal(nullptr, _attr(ctx));
+		SA_END;
+
+		SA_BEGIN2(literal_compose_bool, ctx, (bool val))
+			_val(ctx) = ast::Literal(val);
+		SA_END;
+	}
 	auto const literal_def
-		= strict_double			[ SA({ CV = ast::Literal(CA); }) ]
-		| x3::int64				[ SA({ CV = ast::Literal(CA); }) ]
-		| string_literal		[ SA({ CV = ast::Literal(CA, '"'); }) ]
-		| (+x3::char_('-'))		[ SA({ CV = ast::Literal(nullptr, CA); }) ]
-		| x3::string("nil")		[ SA({ CV = ast::Literal(nullptr, CA); }) ]
-		| x3::string("true")	[ SA({ CV = ast::Literal(true); }) ]
-		| x3::string("false")	[ SA({ CV = ast::Literal(false); }) ]
+		= strict_double			[ sa::literal_compose_value() ]
+		| x3::int64				[ sa::literal_compose_value() ]
+		| string_literal		[ sa::literal_compose_value() ]
+		| (+x3::char_('-'))		[ sa::literal_compose_nil() ]
+		| x3::string("nil")		[ sa::literal_compose_nil() ]
+		| x3::string("true")	[ sa::literal_compose_bool(true) ]
+		| x3::string("false")	[ sa::literal_compose_bool(false) ]
 		;
 	BOOST_SPIRIT_DEFINE(literal);
+
+	namespace sa {
+		SA_BEGIN(param_literal, ctx)
+			_val(ctx) = ast::Param(_attr(ctx));
+		SA_END;
+
+		SA_BEGIN(param_symbol, ctx)
+			_val(ctx) = ast::Param(_attr(ctx), false);
+		SA_END;
+
+		SA_BEGIN(param_symbol_extern, ctx) {
+			const char* separator = nullptr;
+			const auto& parts = _attr(ctx);
+			std::string ret;
+			for (const auto& part : parts) {
+				if (separator) ret.append(separator);
+				ret.append(part);
+				separator = ".";
+			}
+			return ast::Param(ret, true);
+		}
+		SA_END;
+
+		SA_BEGIN(param_mem, ctx)
+			_val(ctx) = ast::Param(
+				fs::at_c<2>(_attr(ctx)),
+				fs::at_c<0>(_attr(ctx)),
+				fs::at_c<1>(_attr(ctx)).value_or('\0')
+			);
+		SA_END;
+	}
 	auto const param_def
-		= literal
-		| ident
-		| x3::char_('`') >> (ident % '.')
-		| x3::char_("@$^") >> -x3::char_("@$^") >> x3::int_;
-	;
+		= literal[sa::param_literal()]
+		| ident[sa::param_symbol()]
+		| (x3::lit('`') >> (ident % '.'))[sa::param_symbol_extern()]
+		| (x3::char_("@$^") >> -x3::char_("@$^") >> x3::int_)[sa::param_mem()]
+		;
 	BOOST_SPIRIT_DEFINE(param);
 	auto const annotation_def
 		= ident >> -('[' >> +ident >> ']') >> *(ident >> -(':' >> ident))
@@ -152,70 +184,62 @@ struct TestPattern {
 	std::string src;
 	Result result;
 	bool succeed;
+
+	TestPattern(const std::string& src, const Result& result, bool succeed)
+		: src(src), result(result), succeed(succeed) {
+	}
 };
 
+template <typename ID, typename Attribute>
+void do_test(const x3::rule<ID, Attribute>& rule, std::initializer_list<TestPattern<Attribute>>&& patterns) {
+	for (auto& p : patterns) {
+		auto it = p.src.begin();
+		Attribute result;
+		bool succeeded = x3::phrase_parse(it, p.src.end(), rule, x3::space | parser::comment, result);
+
+		_ASSERT(succeeded == p.succeed);
+		if (succeeded) {
+			_ASSERT(it == p.src.end());
+			_ASSERT(result == p.result);
+		}
+	}
+}
+
 void test_ident() {
-	TestPattern<std::string> ident_tests[] = {
+	do_test(parser::ident, {
 		{ "set_radius", "set_radius", true },
 		{ "Vector3", "Vector3", true },
 		{ "_process", "_process", true },
 
 		{ "200d", "", false },
 		{ "日の出", "", false },
-	};
-
-
-
-	for (auto& p : ident_tests) {
-		auto it = p.src.begin();
-		std::string result;
-		bool succeeded = x3::phrase_parse(it, p.src.end(), parser::ident, x3::space | parser::comment, result);
-
-		_ASSERT(succeeded == p.succeed);
-		if (succeeded) {
-			_ASSERT(it == p.src.end());
-			_ASSERT(result == p.result);
-		}
-	}
+	});
 }
 
 void test_string_literal() {
-	TestPattern<std::string> patterns[]{
+	do_test(parser::string_literal,  {
 		{ R"("1")" , "1", true },
 		{ R"("")" , "", true },
 		{ R"("aaa bb ccc")" , "aaa bb ccc", true },
 		{ R"("sub ' string")" , "sub ' string", true },
 
-		{ R"('1')" , "1", true },
+		{ R"('1')", "1", true },
 		{ R"('')" , "", true },
 		{ R"('aaa bb ccc')" , "aaa bb ccc", true },
 		{ R"('sub " string')" , "sub \" string", true },
-	};
-
-	for (auto& p : patterns) {
-		auto it = p.src.begin();
-		std::string result;
-		bool succeeded = x3::phrase_parse(it, p.src.end(), parser::string_literal, x3::space | parser::comment, result);
-
-		_ASSERT(succeeded == p.succeed);
-		if (succeeded) {
-			_ASSERT(it == p.src.end());
-			_ASSERT(result == p.result);
-		}
-	}
-
+	});
 }
 
 void test_literal() {
-	TestPattern<ast::Literal> patterns[] = {
+	do_test(parser::literal, {
 		{ "10", ast::Literal(10LL), true },
 		{ "16777216", ast::Literal(16777216LL), true },
 		{ "-3.1", ast::Literal(-3.1), true },
 		{ "1.1e11", ast::Literal(1.1e11), true },
-		{ "\"a b c\"", ast::Literal("a b c", '"'), true },
-		//{ "'X Y Z'", ast::Literal("X Y Z", '\''), true },
-		//{ "'日本語文字列'", ast::Literal("日本語文字列", '\''), true },
-		//{ "'🎐🎐🎐'", ast::Literal("🎐🎐🎐", '\''), true },
+		{ R"("a b c")", ast::Literal("a b c"), true },
+		{ "'X Y Z'", ast::Literal("X Y Z"), true },
+		{ "'日本語文字列'", ast::Literal("日本語文字列"), true },
+		{ "'🎐🎐🎐'", ast::Literal("🎐🎐🎐"), true },
 		{ "-", ast::Literal(nullptr, "-"), true },
 		{ "--", ast::Literal(nullptr, "--"), true },
 		{ "---", ast::Literal(nullptr, "---"), true },
@@ -223,26 +247,41 @@ void test_literal() {
 		{ "nil", ast::Literal(nullptr, "nil"), true },
 		{ "false", ast::Literal(false), true },
 		{ "true", ast::Literal(true), true },
-	};
+	});
 
-	for (auto& p : patterns) {
-		auto it = p.src.begin();
-		ast::Literal result;
-		bool succeeded = x3::phrase_parse(it, p.src.end(), parser::literal, x3::space | parser::comment, result);
-
-		_ASSERT(succeeded == p.succeed);
-		if (succeeded) {
-			_ASSERT(it == p.src.end());
-			_ASSERT(result == p.result);
-		}
-	}
 }
 
+void test_param() {
+	do_test(parser::param, {
+		{ "10", ast::Param(ast::Literal(10LL)), true },
+		{ "16777216", ast::Param(ast::Literal(16777216LL)), true },
+		{ "-3.1", ast::Param(ast::Literal(-3.1)), true },
+		{ "1.1e11", ast::Param(ast::Literal(1.1e11)), true },
+		{ R"("a b c")", ast::Param(ast::Literal("a b c")), true },
+		{ "'X Y Z'", ast::Param(ast::Literal("X Y Z")), true },
+		{ "'日本語文字列'", ast::Param(ast::Literal("日本語文字列")), true },
+		{ "'🎐🎐🎐'", ast::Param(ast::Literal("🎐🎐🎐")), true },
+		{ "-", ast::Param(ast::Literal(nullptr, "-")), true },
+		{ "--", ast::Param(ast::Literal(nullptr, "--")), true },
+		{ "---", ast::Param(ast::Literal(nullptr, "---")), true },
+		{ "----", ast::Param(ast::Literal(nullptr, "----")), true },
+		{ "nil", ast::Param(ast::Literal(nullptr, "nil")), true },
+		{ "false", ast::Param(ast::Literal(false)), true },
+		{ "true", ast::Param(ast::Literal(true)), true },
+
+		{ "i", ast::Param("i", false), true },
+		{ "ClassName", ast::Param("ClassName", false), true },
+
+		{ "`Object.to_string", ast::Param("Object.to_string", true), true },
+
+	});
+}
 
 void test_script_parser() {
 	test_ident();
 	test_string_literal();
 	test_literal();
+	test_param();
 }
 
 

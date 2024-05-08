@@ -5,21 +5,22 @@
 #include <vector>
 #include <string>
 
+#include <cstdio>
+
 namespace ast {
-	struct Line{};
+	struct Line {};
 	using LinePtr = std::shared_ptr<Line>;
 
-	struct Root{
+	struct Root {
 		std::vector<LinePtr> lines;
 	};
-	
+
 	struct Literal {
 		enum {
 			TYPE_INVALID,
 			TYPE_INTEGER,
 			TYPE_FLOAT,
-			TYPE_STRING_SQ,
-			TYPE_STRING_DQ,
+			TYPE_STRING,
 			TYPE_NIL,
 			TYPE_BOOL,
 		} type;
@@ -32,30 +33,40 @@ namespace ast {
 		Literal()
 			: type(TYPE_INVALID)
 			, int_value() {}
-		Literal(int64_t i)
+		explicit Literal(int64_t i)
 			: type(TYPE_INTEGER)
 			, int_value(i) {}
-		Literal(double f)
+		explicit Literal(double f)
 			: type(TYPE_FLOAT)
 			, float_value(f) {}
-		Literal(std::string s, char quote_char)
-			: type(quote_char == '"' ? TYPE_STRING_SQ : TYPE_STRING_DQ)
-			, float_value()
+
+		explicit Literal(std::string s)
+			: type(TYPE_STRING)
+			, int_value()
 			, string_value(s) {}
-		Literal(std::nullptr_t, std::string nil_str)
+		template <size_t N>
+		explicit Literal(const char(&str)[N])
+			: type(TYPE_STRING)
+			, int_value()
+			, string_value(str) {}
+
+		explicit Literal(std::nullptr_t, std::string nil_str)
 			: type(TYPE_NIL)
 			, int_value()
 			, string_value(nil_str) {}
-		Literal(bool b)
+		explicit Literal(bool b)
 			: type(TYPE_BOOL)
 			, int_value(b ? 1 : 0) {}
 
-		// デバッグ用ダミー
-		// 何が入ってくる？
-		template <typename T>
-		Literal(T&& t) {
-			_ASSERT(0);
-		}
+		Literal(const Literal& other) = default;
+		Literal(Literal&& other) = default;
+
+		//// デバッグ用ダミー
+		//// 何が入ってくる？
+		//template <typename T>
+		//Literal(T&& t) {
+		//	_ASSERT(0);
+		//}
 
 
 		Literal& operator =(const Literal& other) = default;
@@ -69,8 +80,7 @@ namespace ast {
 					return int_value == other.int_value;
 				case TYPE_FLOAT:
 					return float_value == other.float_value;
-				case TYPE_STRING_SQ:
-				case TYPE_STRING_DQ:
+				case TYPE_STRING:
 					return string_value == other.string_value;
 				case TYPE_NIL:
 					return string_value == other.string_value;
@@ -81,20 +91,84 @@ namespace ast {
 	};
 
 	struct Param {
+		enum {
+			TYPE_INVALID = -1,
+			TYPE_LITERAL,
+			TYPE_IDENT,
+			TYPE_MEMORY,
+		} type;
+
+		Literal literal;
+
 		char segment;
 		char addr_segment;
 		int index;
+		bool is_extern;
 		std::string symbol;
+
+		Param()
+			: type(TYPE_INVALID)
+			, segment('\0')
+			, addr_segment('\0')
+			, index(0)
+			, is_extern(false) {}
+		Param(Literal lit)
+			: type(TYPE_LITERAL)
+			, literal(lit)
+			, segment('\0')
+			, addr_segment('\0')
+			, index(0)
+			, is_extern(false) {}
+
+		Param(std::string ident, bool ext)
+			: type(TYPE_IDENT)
+			, segment('\0')
+			, addr_segment('\0')
+			, index(0)
+			, is_extern(ext)
+			, symbol(ident) {}
+		template <size_t N>
+		Param(const char(&ident)[N], bool ext)
+			: type(TYPE_IDENT)
+			, segment('\0')
+			, addr_segment('\0')
+			, index(0)
+			, is_extern(ext)
+			, symbol(ident) {}
+
+		Param(int i, char seg0, char seg1)
+			: type(TYPE_MEMORY)
+			, segment(seg0)
+			, addr_segment(seg1)
+			, index(i)
+			, is_extern(false) {}
+
+		Param(const Param& other) = default;
+		Param(Param&& other) = default;
+
+		Param& operator =(const Param& other) = default;
+		Param& operator =(Param&& other) = default;
+
+		bool operator==(const Param& other) const {
+			if (type == other.type) {
+				switch (type) {
+				case TYPE_LITERAL:
+					return literal == other.literal;
+				case TYPE_IDENT:
+					return is_extern == other.is_extern
+						&& symbol == other.symbol;
+				case TYPE_MEMORY:
+					return index == other.index;
+				}
+			}
+			return false;
+		}
 	};
 
 	struct Annotation {
 
 	};
 }
-
-
-
-
 
 
 struct SourceLine;
@@ -154,7 +228,7 @@ struct EntityDetail {
 struct OperationEntityDetail : EntityDetail {
 	OpcodeDesc opcode;
 	OperandDesc destination;
-	OperandDesc operand[ 3 ];
+	OperandDesc operand[3];
 };
 
 struct AnnotationEntityDetail : EntityDetail {
