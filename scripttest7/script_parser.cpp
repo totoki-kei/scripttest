@@ -24,7 +24,7 @@ namespace parser {
 	x3::rule<struct string_literal_tag, std::string> const string_literal;
 	x3::rule<struct literal_tag, ast::Literal> const literal;
 	x3::rule<struct param_tag, ast::Param> const param;
-	x3::rule<struct annotation_tag> const annotation;
+	x3::rule<struct annotation_tag, ast::Annotation> const annotation;
 
 	x3::rule<struct line_label_tag> const line_label;
 	x3::rule<struct line_segment_tag> const line_segment;
@@ -68,8 +68,8 @@ namespace parser {
 	BOOST_SPIRIT_DEFINE(start);
 
 	auto const ident_def
-		= (x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_"))
-		>> *(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_") | x3::char_('0', '9'))
+		= lexeme[(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_"))
+		>> *(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_") | x3::char_('0', '9'))]
 		;
 	BOOST_SPIRIT_DEFINE(ident);
 
@@ -126,15 +126,16 @@ namespace parser {
 				ret.append(part);
 				separator = ".";
 			}
-			return ast::Param(ret, true);
+			_val(ctx) = ast::Param(ret, true);
 		}
 		SA_END;
 
 		SA_BEGIN(param_mem, ctx)
+			const auto& attr = _attr(ctx);
 			_val(ctx) = ast::Param(
-				fs::at_c<2>(_attr(ctx)),
-				fs::at_c<0>(_attr(ctx)),
-				fs::at_c<1>(_attr(ctx)).value_or('\0')
+				fs::at_c<2>(attr).value_or(-1),
+				fs::at_c<0>(attr),
+				fs::at_c<1>(attr).value_or('\0')
 			);
 		SA_END;
 	}
@@ -142,11 +143,28 @@ namespace parser {
 		= literal[sa::param_literal()]
 		| ident[sa::param_symbol()]
 		| (x3::lit('`') >> (ident % '.'))[sa::param_symbol_extern()]
-		| (x3::char_("@$^") >> -x3::char_("@$^") >> x3::int_)[sa::param_mem()]
+		| (x3::char_("@$^") >> -x3::char_("@$^") >> -x3::int_)[sa::param_mem()]
 		;
 	BOOST_SPIRIT_DEFINE(param);
+
+	namespace sa {
+		SA_BEGIN(annotation_compose, ctx) {
+			const auto& attr = _attr(ctx);
+			
+			const auto& name = fs::at_c<0>(attr);
+			const auto& flags = fs::at_c<1>(attr).value_or(std::vector<std::string>());
+			const auto& ids = fs::at_c<2>(attr);
+
+			std::vector<std::pair<std::string, std::string>> id_types;
+			std::transform(ids.begin(), ids.end(), std::back_inserter(id_types), [&](const auto& id) {
+				return std::make_pair(fs::at_c<0>(id), fs::at_c<1>(id).value_or(""));
+			});
+
+			_val(ctx) = ast::Annotation{ name, flags, id_types };
+		} SA_END;
+	}
 	auto const annotation_def
-		= ident >> -('[' >> +ident >> ']') >> *(ident >> -(':' >> ident))
+		= (ident >> -('[' >> +ident >> ']') >> *(ident >> -(':' >> ident)))[sa::annotation_compose()]
 		;
 	BOOST_SPIRIT_DEFINE(annotation);
 
@@ -182,12 +200,17 @@ namespace parser {
 template <typename Result>
 struct TestPattern {
 	std::string src;
-	Result result;
 	bool succeed;
+	
+	boost::optional<Result> result;
+	std::function<bool(const Result&)> pred;
 
-	TestPattern(const std::string& src, const Result& result, bool succeed)
+	TestPattern(const std::string& src, Result result, bool succeed)
 		: src(src), result(result), succeed(succeed) {
 	}
+	template <typename Pred>
+	TestPattern(const std::string& src, Pred fn)
+		: src(src), result(), pred(fn), succeed(true) {}
 };
 
 template <typename ID, typename Attribute>
@@ -200,7 +223,12 @@ void do_test(const x3::rule<ID, Attribute>& rule, std::initializer_list<TestPatt
 		_ASSERT(succeeded == p.succeed);
 		if (succeeded) {
 			_ASSERT(it == p.src.end());
-			_ASSERT(result == p.result);
+			if (p.result) {
+				_ASSERT(result == p.result);
+			}
+			else if (p.pred) {
+				_ASSERT(p.pred(result));
+			}
 		}
 	}
 }
@@ -274,6 +302,24 @@ void test_param() {
 
 		{ "`Object.to_string", ast::Param("Object.to_string", true), true },
 
+		{ "@0", ast::Param(0, '@', '\0'), true },
+		{ "$1", ast::Param(1, '$', '\0'), true },
+		{ "^2000", ast::Param(2000, '^', '\0'), true },
+		{ "@@", ast::Param(-1, '@', '@'), true },
+		{ "^^", ast::Param(-1, '^', '^'), true },
+		{ "$@10", ast::Param(10, '$', '@'), true },
+	});
+}
+
+void test_annotation() {
+	do_test(parser::annotation, {
+		{ "func get_radius:float", ast::Annotation(), true },
+		{ "func set_radius:void r:float", ast::Annotation(), true },
+		{ "func get_color:color", ast::Annotation(), true },
+		{ "func set_color:void c:color", ast::Annotation(), true },
+		{ "prop radius:float get_radius set_radius", ast::Annotation(), true },
+		{ "prop color:color get_color set_color", ast::Annotation(), true },
+		{ "func [override] _draw:void delta:float", ast::Annotation(), true },
 	});
 }
 
@@ -282,6 +328,7 @@ void test_script_parser() {
 	test_string_literal();
 	test_literal();
 	test_param();
+	test_annotation();
 }
 
 

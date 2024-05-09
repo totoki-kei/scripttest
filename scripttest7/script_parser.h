@@ -166,7 +166,15 @@ namespace ast {
 	};
 
 	struct Annotation {
+		std::string name;
+		std::vector<std::string> flags;
+		std::vector<std::pair<std::string, std::string>> id_and_types;
 
+
+
+		bool operator==(const Annotation& other) const {
+			return name == other.name && flags == other.flags && id_and_types == other.id_and_types;
+		}
 	};
 }
 
