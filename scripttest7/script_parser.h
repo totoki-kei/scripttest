@@ -4,10 +4,16 @@
 #include <string>
 #include <vector>
 #include <string>
+#include <optional>
 
 #include <cstdio>
 
 namespace ast {
+	struct SourcePosition {
+		int start_line, start_column;
+		int end_line, end_column;
+	};
+
 	struct Literal {
 		enum {
 			TYPE_INVALID,
@@ -173,8 +179,8 @@ namespace ast {
 
 	struct OperationLine : Line {
 		std::string opname;
-		std::vector <Param> input;
-		std::unique_ptr<Param> output;
+		std::vector<Param> input;
+		std::optional<Param> output;
 	};
 
 	struct AnnotationLine : Line {
@@ -271,4 +277,3 @@ std::shared_ptr<Entity> make_entity(const SourceLine* source_line, std::vector<s
 
 void test_script_parser();
 
-ast::Root parse(const std::string& src);
