@@ -8,13 +8,6 @@
 #include <cstdio>
 
 namespace ast {
-	struct Line {};
-	using LinePtr = std::shared_ptr<Line>;
-
-	struct Root {
-		std::vector<LinePtr> lines;
-	};
-
 	struct Literal {
 		enum {
 			TYPE_INVALID,
@@ -60,14 +53,6 @@ namespace ast {
 
 		Literal(const Literal& other) = default;
 		Literal(Literal&& other) = default;
-
-		//// デバッグ用ダミー
-		//// 何が入ってくる？
-		//template <typename T>
-		//Literal(T&& t) {
-		//	_ASSERT(0);
-		//}
-
 
 		Literal& operator =(const Literal& other) = default;
 		Literal& operator =(Literal&& other) = default;
@@ -170,12 +155,40 @@ namespace ast {
 		std::vector<std::string> flags;
 		std::vector<std::pair<std::string, std::string>> id_and_types;
 
-
-
 		bool operator==(const Annotation& other) const {
 			return name == other.name && flags == other.flags && id_and_types == other.id_and_types;
 		}
 	};
+
+	struct Line {};
+	using LinePtr = std::shared_ptr<Line>;
+
+	struct LabelLine : Line {
+		std::string name;
+	};
+
+	struct SegmentLine : Line {
+		std::string name;
+	};
+
+	struct OperationLine : Line {
+		std::string opname;
+		std::vector <Param> input;
+		std::unique_ptr<Param> output;
+	};
+
+	struct AnnotationLine : Line {
+		Annotation annotation;
+	};
+
+	struct AnnotationBlock : Line {
+		std::vector<Annotation> annotation_list;
+	};
+
+	struct Root {
+		std::vector<LinePtr> lines;
+	};
+
 }
 
 
@@ -258,7 +271,4 @@ std::shared_ptr<Entity> make_entity(const SourceLine* source_line, std::vector<s
 
 void test_script_parser();
 
-void test_ident();
-
-
-
+ast::Root parse(const std::string& src);

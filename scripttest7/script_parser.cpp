@@ -2,14 +2,21 @@
 
 #define BOOST_SPIRIT_X3_UNICODE
 #include <boost/spirit/home/x3.hpp>
+#include <boost/spirit/home/support/iterators/line_pos_iterator.hpp>
 
 namespace x3 = boost::spirit::x3;
 namespace fs = boost::fusion;
 
-namespace parser {
-	using namespace x3;
+/// <summary>
+/// line_pos_iterator
+/// https://www.boost.org/doc/libs/1_85_0/libs/spirit/doc/html/spirit/support/line_pos_iterator.html
+/// - get_line() で行番号
+/// - get_column() で現在の列位置
+/// </summary>
+using SourceIterator = boost::spirit::line_pos_iterator<std::string::const_iterator>;
 
-	// ruleは今のところ定義のみ Attributeは後で付け加える
+namespace parser {
+		// ruleは今のところ定義のみ Attributeは後で付け加える
 
 	template <typename Context>
 	void print(const Context& ctx) {
@@ -26,12 +33,12 @@ namespace parser {
 	x3::rule<struct param_tag, ast::Param> const param;
 	x3::rule<struct annotation_tag, ast::Annotation> const annotation;
 
-	x3::rule<struct line_label_tag> const line_label;
-	x3::rule<struct line_segment_tag> const line_segment;
-	x3::rule<struct line_operation_tag> const line_operation;
-	x3::rule<struct line_annotation_tag> const line_annotation;
+	x3::rule<struct line_label_tag, ast::LabelLine> const line_label;
+	x3::rule<struct line_segment_tag, ast::SegmentLine> const line_segment;
+	x3::rule<struct line_operation_tag, ast::OperationLine> const line_operation;
+	x3::rule<struct line_annotation_tag, ast::AnnotationLine> const line_annotation;
 
-	x3::rule<struct block_annotations_tag> const block_annotations;
+	x3::rule<struct block_annotations_tag, ast::AnnotationBlock> const block_annotations;
 
 	x3::rule<struct comment_tag> const comment;
 
@@ -42,10 +49,10 @@ namespace parser {
 
 	namespace sa {
 #define SA_BEGIN(fn_name, context_name) \
-	static auto fn_name () { return [](const auto& context_name){
+	static auto fn_name () { return [](const auto& context_name){ using namespace x3;
 
 #define SA_BEGIN2(fn_name, context_name, args) \
-	static auto fn_name args { return [=](const auto& context_name){
+	static auto fn_name args { return [=](const auto& context_name){ using namespace x3;
 
 #define SA_END    }; }
 
@@ -68,7 +75,7 @@ namespace parser {
 	BOOST_SPIRIT_DEFINE(start);
 
 	auto const ident_def
-		= lexeme[(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_"))
+		= x3::lexeme[(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_"))
 		>> *(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_") | x3::char_('0', '9'))]
 		;
 	BOOST_SPIRIT_DEFINE(ident);
@@ -79,8 +86,8 @@ namespace parser {
 		SA_END;
 	}
 	auto const string_literal_def
-		= lexeme[ '"' >> *(char_ - lit('"')) >> '"']
-		| lexeme[ '\'' >> *(char_ - lit('\'')) >> '\'' ]
+		= x3::lexeme[ '"' >> *(x3::char_ - x3::lit('"')) >> '"']
+		| x3::lexeme[ '\'' >> *(x3::char_ - x3::lit('\'')) >> '\'' ]
 		;
 	BOOST_SPIRIT_DEFINE(string_literal);
 
@@ -167,6 +174,8 @@ namespace parser {
 		= (ident >> -('[' >> +ident >> ']') >> *(ident >> -(':' >> ident)))[sa::annotation_compose()]
 		;
 	BOOST_SPIRIT_DEFINE(annotation);
+
+	/*********************************************************************************************/
 
 	auto const line_label_def
 		= ident >> x3::lit(':') >> x3::eol;
@@ -330,6 +339,10 @@ void test_script_parser() {
 	test_param();
 	test_annotation();
 }
+
+
+
+
 
 
 std::shared_ptr<Entity> make_entity(const SourceLine* source_line, std::vector<std::string>& tokens) {
