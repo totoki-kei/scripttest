@@ -185,6 +185,9 @@ namespace ast {
 
 	struct AnnotationLine : Line {
 		Annotation annotation;
+
+		AnnotationLine(const Annotation& annotation)
+			: annotation(annotation) {}
 	};
 
 	struct AnnotationBlock : Line {
@@ -196,6 +199,8 @@ namespace ast {
 	};
 
 }
+
+void test_script(const std::string&);
 
 
 struct SourceLine;

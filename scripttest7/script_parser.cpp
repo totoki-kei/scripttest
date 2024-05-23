@@ -28,7 +28,7 @@ namespace parser {
 
 	static x3::real_parser<double, x3::strict_real_policies<double>> strict_double;
 
-	x3::rule<struct start_tag> const start;
+	x3::rule<struct start_tag, ast::Root> const start;
 
 	x3::rule<struct ident_tag, std::string> const ident;
 	x3::rule<struct ident2_tag, std::string> const ident2;
@@ -37,12 +37,12 @@ namespace parser {
 	x3::rule<struct param_tag, ast::Param> const param;
 	x3::rule<struct annotation_tag, ast::Annotation> const annotation;
 
-	x3::rule<struct line_label_tag, ast::LabelLine> const line_label;
-	x3::rule<struct line_segment_tag, ast::SegmentLine> const line_segment;
-	x3::rule<struct line_operation_tag, ast::OperationLine> const line_operation;
-	x3::rule<struct line_annotation_tag, ast::AnnotationLine> const line_annotation;
+	x3::rule<struct line_label_tag, ast::LinePtr> const line_label;
+	x3::rule<struct line_segment_tag, ast::LinePtr> const line_segment;
+	x3::rule<struct line_operation_tag, ast::LinePtr> const line_operation;
+	x3::rule<struct line_annotation_tag, ast::LinePtr> const line_annotation;
 
-	x3::rule<struct block_annotations_tag, ast::AnnotationBlock> const block_annotations;
+	x3::rule<struct block_annotations_tag, ast::LinePtr> const block_annotations;
 
 	x3::rule<struct comment_tag> const comment;
 
@@ -129,8 +129,8 @@ namespace parser {
 #define INLINE_SA(context_name)     ([ ](const auto& context_name) -> void
 #define INLINE_SA_END               )
 
-		DEFINE_SA(debug_print_type, ctx) {
-			puts("--------");
+		DEFINE_SA2(debug_print_type, ctx, (const char* fn)) {
+			printf("---- %s ----\n", fn);
 			printf("typeof(_val) : '%s'\n", typeid(_val(ctx)).name());
 			printf("typeof(_attr): '%s'\n", typeid(_attr(ctx)).name());
 		} DEFINE_SA_END;
@@ -140,7 +140,8 @@ namespace parser {
 		} DEFINE_SA_END;
 
 		DEFINE_SA(start_newline, ctx) {
-			_val(ctx).lines.push_back(_attr(ctx));
+			//_val(ctx).lines.push_back(_attr(ctx));
+			debug_print_type(__FUNCTION__)(ctx);
 		} DEFINE_SA_END;
 
 		DEFINE_SA(ident2_compose, ctx) {
@@ -204,11 +205,42 @@ namespace parser {
 		} DEFINE_SA_END;
 
 		DEFINE_SA(line_label_compose, ctx) {
-			_val(ctx) = new ast::LabelLine{ _attr(ctx) };
+			debug_print_type(__FUNCTION__)(ctx);
+			//_val(ctx) = new ast::LabelLine{ _attr(ctx) };
 		} DEFINE_SA_END;
 
 		DEFINE_SA(line_segment_compose, ctx) {
-			_val(ctx) = new ast::SegmentLine{ _attr(ctx) };
+			debug_print_type(__FUNCTION__)(ctx);
+			//_val(ctx) = new ast::SegmentLine{ _attr(ctx) };
+		} DEFINE_SA_END;
+
+		DEFINE_SA(line_operation_compose, ctx) {
+			auto out_param = fs::at_c<0>(_attr(ctx));
+			auto opname = fs::at_c<1>(_attr(ctx));
+			auto in_param_list = fs::at_c<2>(_attr(ctx));
+
+			auto ret = std::make_shared<ast::OperationLine>();
+			ret->opname = opname;
+			ret->input = in_param_list;
+			if (out_param) {
+				ret->output = *out_param;
+			}
+			_val(ctx) = ret;
+		} DEFINE_SA_END;
+
+		DEFINE_SA(line_annotation_compose, ctx) {
+			debug_print_type(__FUNCTION__)(ctx);
+			//_val(ctx) = new ast::AnnotationLine{ _attr(ctx) };
+		} DEFINE_SA_END;
+
+		DEFINE_SA(annotation_block_init, ctx) {
+			debug_print_type(__FUNCTION__)(ctx);
+			//_val(ctx) = new ast::AnnotationBlock();
+		} DEFINE_SA_END;
+
+		DEFINE_SA(annotation_block_add, ctx) {
+			debug_print_type(__FUNCTION__)(ctx);
+			//_val(ctx)->annotation_list.push_back(_attr(ctx));
 		} DEFINE_SA_END;
 	}
 
@@ -225,7 +257,7 @@ namespace parser {
 		= x3::lexeme[
 			//(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_"))
 			//	>> *(x3::char_('a', 'z') | x3::char_('A', 'Z') | x3::char_("_") | x3::char_('0', '9'))
-			    (x3::alpha | x3::char_("_"))
+				(x3::alpha | x3::char_("_"))
 			>> *(x3::alnum | x3::char_("_"))
 		]
 		;
@@ -277,16 +309,16 @@ namespace parser {
 	BOOST_SPIRIT_DEFINE(line_segment);
 
 	auto const line_operation_def
-		= -param >> ident >> *param >> x3::eol;
+		= (-(param >> '=') >> ident >> x3::repeat(0, 3)[param] >> x3::eol)[sa::line_operation_compose()];
 	BOOST_SPIRIT_DEFINE(line_operation);
 
 	auto const line_annotation_def
-		= x3::lit('#') >> annotation >> x3::eol;
+		= (x3::lit('#') >> annotation >> x3::eol)[sa::line_annotation_compose()];
 	BOOST_SPIRIT_DEFINE(line_annotation);
 
 	auto const block_annotations_def
-		= x3::lit("###") >> x3::eol
-		>> *(annotation >> x3::eol)
+		= (x3::lit("###") >> x3::eol)[sa::annotation_block_init()]
+		>> *((annotation >> x3::eol)[sa::annotation_block_add()])
 		>> x3::lit("###") >> x3::eol
 		;
 	BOOST_SPIRIT_DEFINE(block_annotations);
@@ -440,8 +472,17 @@ void test_script_parser() {
 	test_param();
 	test_annotation();
 	// -------------------
+
 }
 
+void test_script(const std::string& str) {
+	auto it = std::begin(str);
+	ast::Root root;
+	bool succeeded = x3::phrase_parse(it, str.end(), parser::start, x3::space | parser::comment, root);
+
+	printf("parsed lines : %I64d\n", root.lines.size());
+
+}
 
 
 
