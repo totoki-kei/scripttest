@@ -3,7 +3,6 @@
 %namespace Scrip;
 %recover error;
 %allow_ebnf;
-%smart_pointer<shared_ptr>; 
 
 %token number<EvalValue>;
 %token ident<String>;
@@ -15,33 +14,34 @@
 %token dollar comma semicolon;
 %token kwd_if kwd_else kwd_while kwd_continue kwd_break kwd_return;
 
-Statement<Ast>
+Statement<AstPtr>
 	: [EmptyStatement]    semicolon
 	| [ExprStatement]     Expr(0) semicolon
 	| [AssignStatement]   ident(0) op_assign Expr(1) semicolon
-	| [BlockStatement]    brace_open Statement*(0) brace_close
-	| [IfStatement]       kwd_if     paren_open Expr(0) paren_close Statement(1)
-	| [ElseStatement]     kwd_else   Statement(0)
-	| [WhileStatement]    kwd_while paren_open Expr(0) paren_close Statement(1)
 	| [ContinueStatement] kwd_continue semicolon
 	| [BreakStatement]    kwd_break semicolon
 	| [ReturnStatement]   kwd_return semicolon
 	| [ReturnStatement]   kwd_return Expr(0) semicolon
+	| [BlockStatement]    brace_open Statement*(0) brace_close
+	| [IfStatement]       kwd_if    paren_open Expr(0) paren_close Statement(1)
+	| [IfElseStatement]   kwd_if    paren_open Expr(0) paren_close Statement(1) kwd_else Statement(2)
+	| [WhileStatement]    kwd_while paren_open Expr(0) paren_close Statement(1)
 	;
 
-Expr<Ast>
+
+Expr<AstPtr>
 	: [Identity] Term(0)
 	| [MakeAdd] Expr(0) op_add Term(1)
 	| [MakeSub] Expr(0) op_sub Term(1)
 	;
 
-Term<Ast>
+Term<AstPtr>
 	: [Identity] Unit(0)
 	| [MakeMul] Term(0) op_mul Unit(1)
 	| [MakeDiv] Term(0) op_div Unit(1)
 	;
 
-Unit<Ast>
+Unit<AstPtr>
 	: [Identity] number(0)
 	| [Negate] op_sub Unit(0)
 	| [MakeCall] ident(0) paren_open List(1) paren_close
@@ -49,7 +49,7 @@ Unit<Ast>
 	| [Identity] paren_open Expr(0) paren_close
 	;
 
-List<Ast>
+List<AstPtr>
 	: [EmptyList] 
 	| [MakeList] Expr/comma(0)
 	;
