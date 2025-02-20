@@ -43,18 +43,20 @@ namespace Scrip {
 	//	virtual EvalValue GetVariableValue(const String& name) = 0;
 	//};
 
+	enum class FlowAction {
+		None,
+		Break,
+		Continue,
+		Return,
+	};
+
+
+
 	class Environment {
 	public:
 		using Macro = std::function<EvalValue(const EvalValueList&)>;
 		using VariableCallback = std::function<EvalValue(const String&)>;
 		using MacroCallback = std::function<EvalValue(const String&, const EvalValueList&)>;
-
-		enum FlowControl {
-			FLOW_NONE,
-			FLOW_BREAK,
-			FLOW_CONTINUE,
-			FLOW_RETURN,
-		};
 
 
 		Environment() = default;
@@ -136,27 +138,23 @@ namespace Scrip {
 			variable_callback = callback;
 		}
 
-		void SetFlowControlState(FlowControl flow) {
-			flow_control = flow;
-		}
-
-		FlowControl GetFlowControlState() const {
-			return flow_control;
-		}
-
-		void ClearFlowControlState() {
-			flow_control = FLOW_NONE;
-		}
-
 	private:
 		std::unordered_map<String, Macro> macro_map;
 		std::unordered_map<String, EvalValue> variable_map;
 
 		MacroCallback macro_callback;
 		VariableCallback variable_callback;
-		FlowControl flow_control = FLOW_NONE;
 	};
 
+	struct EvalResult {
+		EvalValue value;
+		FlowAction flow;
+
+		EvalResult(EvalValue value, FlowAction flow = FlowAction::None)
+			: value(value)
+			, flow(flow)
+		{}
+	};
 
 	struct Ast {
 		struct Constant;
@@ -168,17 +166,15 @@ namespace Scrip {
 		struct Call;
 		struct Assign;
 
-
 		struct StatementBlock;
 		struct Branch;
 		struct Loop;
-
 
 		struct FlowControl;
 
 		virtual ~Ast() = default;
 		virtual std::string to_string() const = 0;
-		virtual EvalValue eval(Environment& env) const = 0;
+		virtual EvalResult eval(Environment& env) const = 0;
 	};
 
 	struct Ast::Constant : public Ast {
@@ -189,7 +185,7 @@ namespace Scrip {
 		std::string to_string() const override {
 			return "Constant(" + std::to_string(value) + ")";
 		}
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			return value;
 		}
 	};
@@ -205,7 +201,7 @@ namespace Scrip {
 		std::string to_string() const override {
 			return "VarRef(" + name + ")";
 		}
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			return env.GetVariableValue(name);
 		}
 	};
@@ -232,9 +228,9 @@ namespace Scrip {
 			return s;
 		}
 
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			// List‚ª’¼Úeval‚³‚ê‚é‚±‚Æ‚Í’Êí‚È‚¢
-			EvalValue result = 0.0;
+			EvalResult result = 0.0;
 			for (const auto& e : list) {
 				result = e->eval(env);
 			}
@@ -251,7 +247,7 @@ namespace Scrip {
 			return "Identity(" + expr->to_string() + ")";
 		}
 
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			return expr->eval(env);
 		}
 	};
@@ -260,18 +256,22 @@ namespace Scrip {
 		AstPtr expr;
 		enum Op {
 			OP_NEGATE,
+			OP_NOT,
 		} op;
 
 		UniOp(const AstPtr& expr, Op op) : expr(expr), op(op) {}
 
 		std::string to_string() const override {
-			return "UniOp(" + expr->to_string() + ")";
+			auto op_name = std::string(1, "-!"[op]);
+			return "UniOp[" + op_name + "](" + expr->to_string() + ")";
 		}
 
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			switch (op) {
 			case OP_NEGATE:
-				return -expr->eval(env);
+				return { -expr->eval(env).value };
+			case OP_NOT:
+				return expr->eval(env).value == 0.0 ? 1.0 : 0.0;
 			}
 
 			return nan("nan");
@@ -286,6 +286,16 @@ namespace Scrip {
 			OP_SUB,
 			OP_MUL,
 			OP_DIV,
+
+			OP_EQ,
+			OP_DIFFER,
+			OP_LESS,
+			OP_LESSEQ,
+			OP_GREATER,
+			OP_GREATEREQ,
+
+			OP_AND,
+			OP_OR,
 		} op;
 
 		BinOp(const AstPtr& lhs, const AstPtr& rhs, Op op)
@@ -294,21 +304,44 @@ namespace Scrip {
 			, op(op) {}
 
 		std::string to_string() const override {
-			auto op_name = std::string(1, "+-*/"[op]);
+			const char* op_name_map[] = {
+				"+", "-", "*", "/",
+				"==", "!=", "<", "<=", ">", ">=",
+				"&&", "||"
+			};
 
-			return "BinOp[" + op_name + "](" + lhs->to_string() + "," + rhs->to_string() + ")";
+			return "BinOp[" + std::string(op_name_map[(int)op]) + "](" + lhs->to_string() + "," + rhs->to_string() + ")";
 		}
 
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			switch (op) {
 			case OP_ADD:
-				return lhs->eval(env) + rhs->eval(env);
+				return lhs->eval(env).value + rhs->eval(env).value;
 			case OP_SUB:
-				return lhs->eval(env) - rhs->eval(env);
+				return lhs->eval(env).value - rhs->eval(env).value;
 			case OP_MUL:
-				return lhs->eval(env) * rhs->eval(env);
+				return lhs->eval(env).value * rhs->eval(env).value;
 			case OP_DIV:
-				return lhs->eval(env) / rhs->eval(env);
+				return lhs->eval(env).value / rhs->eval(env).value;
+
+			case OP_EQ:
+				return lhs->eval(env).value == rhs->eval(env).value ? 1.0 : 0.0;
+			case OP_DIFFER:
+				return lhs->eval(env).value != rhs->eval(env).value ? 1.0 : 0.0;
+			case OP_LESS:
+				return lhs->eval(env).value < rhs->eval(env).value ? 1.0 : 0.0;
+			case OP_LESSEQ:
+				return lhs->eval(env).value <= rhs->eval(env).value ? 1.0 : 0.0;
+			case OP_GREATER:
+				return lhs->eval(env).value > rhs->eval(env).value ? 1.0 : 0.0;
+			case OP_GREATEREQ:
+				return lhs->eval(env).value >= rhs->eval(env).value ? 1.0 : 0.0;
+
+			case OP_AND:
+				return lhs->eval(env).value != 0.0 && rhs->eval(env).value != 0.0 ? 1.0 : 0.0;
+			case OP_OR:
+				return lhs->eval(env).value != 0.0 || rhs->eval(env).value != 0.0 ? 1.0 : 0.0;
+
 			}
 
 			return nan("nan");
@@ -330,11 +363,11 @@ namespace Scrip {
 			return "Call(" + name + "(" + args->to_string() + "))";
 		}
 
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			EvalValueList arg_values;
 			if (auto list = std::dynamic_pointer_cast<Ast::List>(args)) {
 				for (const auto& e : list->list) {
-					arg_values.push_back(e->eval(env));
+					arg_values.push_back(e->eval(env).value);
 				}
 			}
 			return env.CallMacro(name, arg_values);
@@ -353,8 +386,8 @@ namespace Scrip {
 			return "Assign(" + name + " = " + expr->to_string() + ")";
 		}
 
-		EvalValue eval(Environment& env) const override {
-			return env.SetVariableValue(name, expr->eval(env), true);
+		EvalResult eval(Environment& env) const override {
+			return env.SetVariableValue(name, expr->eval(env).value, true);
 		}
 
 	};
@@ -381,12 +414,12 @@ namespace Scrip {
 			return s;
 		}
 
-		EvalValue eval(Environment& env) const override {
-			if (expr->eval(env) != 0.0) {
-				return true_part ? true_part->eval(env) : 0.0;
+		EvalResult eval(Environment& env) const override {
+			if (expr->eval(env).value != 0.0) {
+				return true_part ? true_part->eval(env).value : 0.0;
 			}
 			else {
-				return false_part ? false_part->eval(env) : 0.0;
+				return false_part ? false_part->eval(env).value : 0.0;
 			}
 		}
 	};
@@ -403,27 +436,27 @@ namespace Scrip {
 			return "Loop(" + expr->to_string() + " : " + stmt->to_string() + ")";
 		}
 
-		EvalValue eval(Environment& env) const override {
-			EvalValue result = 0.0;
+		EvalResult eval(Environment& env) const override {
+			EvalResult result = 0.0;
+			bool continue_flag = false;
 
-			auto flow_state = Environment::FLOW_NONE;
 			do {
-				while (expr->eval(env) != 0.0) {
+				continue_flag = false;
+				while (expr->eval(env).value != 0.0) {
 					result = stmt->eval(env);
-					flow_state = env.GetFlowControlState();
-					if (flow_state == Environment::FLOW_BREAK) {
-						env.ClearFlowControlState();
+					auto flow_state = result.flow;
+					if (flow_state == FlowAction::Break) {
 						return 0.0;
 					}
-					else if (flow_state == Environment::FLOW_RETURN) {
-						env.ClearFlowControlState();
-						return result;
+					else if (flow_state == FlowAction::Return) {
+						return { result.value };
 					}
-					else if (flow_state == Environment::FLOW_CONTINUE) {
-						env.ClearFlowControlState();
+					else if (flow_state == FlowAction::Continue) {
+						continue_flag = true;
+						break;
 					}
 				}
-			} while (flow_state == Environment::FLOW_CONTINUE);
+			} while (continue_flag);
 
 			return result;
 		}
@@ -454,20 +487,16 @@ namespace Scrip {
 			return "FlowControl[" + std::string(flow_control_names[control]) + "](" + expr->to_string() + ")";
 		}
 
-		EvalValue eval(Environment& env) const override {
+		EvalResult eval(Environment& env) const override {
 			switch (control) {
 			case CONTROL_CONTINUE:
-				env.SetFlowControlState(Environment::FLOW_CONTINUE);
-				break;
+				return { 0.0, FlowAction::Continue };
 			case CONTROL_BREAK:
-				env.SetFlowControlState(Environment::FLOW_BREAK);
-				break;
+				return { 0.0, FlowAction::Break };
 			case CONTROL_RETURN:
-				env.SetFlowControlState(Environment::FLOW_RETURN);
-				return expr ? expr->eval(env) : 0.0;
+				return { expr ? expr->eval(env).value : 0.0, FlowAction::Return };
 			case CONTROL_RETURN_VOID:
-				env.SetFlowControlState(Environment::FLOW_RETURN);
-				break;
+				return { 0.0, FlowAction::Return };
 			}
 			return 0.0;
 		}
@@ -492,6 +521,19 @@ namespace Scrip {
 		template <typename ToT>
 		void downcast(ToT& to, const ParseValue& from) {
 			to = std::get<ToT>(from);
+		}
+
+		// ProgramStart
+		AstPtr ProgramStart() {
+			std::cout << "<ProgramStart>" << std::endl;
+			return std::make_shared<Ast::List>();
+		}
+		
+		// Program(Stmt}
+		AstPtr Program(const AstPtr& prog, const AstPtr & stmt) {
+			std::cout << "<Program>" << std::endl;
+			std::dynamic_pointer_cast<Ast::List>(prog)->list.push_back(stmt);
+			return prog;
 		}
 
 		AstPtr EmptyStatement() {
@@ -579,6 +621,60 @@ namespace Scrip {
 		AstPtr Identity(const EvalValue& value) {
 			std::cout << "<Identity>" << std::endl;
 			return std::make_shared<Ast::Constant>(value);
+		}
+
+		// MakeNot(Expr)
+		AstPtr MakeNot(const AstPtr& expr) {
+			std::cout << "<MakeNot>" << std::endl;
+			return std::make_shared<Ast::UniOp>(expr, Ast::UniOp::OP_NOT);
+		}
+
+		// MakeEqual(Expr, Expr)
+		AstPtr MakeEqual(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeEqual>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_EQ);
+		}
+
+		// MakeDiffer(Expr, Expr)
+		AstPtr MakeDiffer(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeDiffer>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_DIFFER);
+		}
+
+		// MakeLess(Expr, Expr)
+		AstPtr MakeLess(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeLess>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_LESS);
+		}
+
+		// MakeLessEq(Expr, Expr)
+		AstPtr MakeLessEq(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeLessEq>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_LESSEQ);
+		}
+
+		// MakeGreater(Expr, Expr)
+		AstPtr MakeGreater(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeGreater>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_GREATER);
+		}
+
+		// MakeGreaterEq(Expr, Expr)
+		AstPtr MakeGreaterEq(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeGreaterEq>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_GREATEREQ);
+		}
+
+		// MakeAnd(Expr, Expr)
+		AstPtr MakeAnd(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeAnd>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_AND);
+		}
+
+		// MakeOr(Expr, Expr)
+		AstPtr MakeOr(const AstPtr& lhs, const AstPtr& rhs) {
+			std::cout << "<MakeOr>" << std::endl;
+			return std::make_shared<Ast::BinOp>(lhs, rhs, Ast::BinOp::OP_OR);
 		}
 
 		// MakeAdd(Expr, Expr)
@@ -789,6 +885,9 @@ namespace Scrip {
 				{ "!=", token_op_differ },
 				{ "<=", token_op_lesseq },
 				{ ">=", token_op_greater },
+				{ "&&", token_op_and_and },
+				{ "||", token_op_or_or },
+				{ "!", token_op_not },
 				{ "<", token_op_less },
 				{ ">", token_op_greater },
 				{ "+", token_op_add },

@@ -8,26 +8,43 @@
 %token ident<String>;
 %token op_add op_sub op_mul op_div;
 %token op_assign;
-%token op_equal op_differ op_less op_lesseq op_greater op_greatereq op_not;
+%token op_equal op_differ op_less op_lesseq op_greater op_greatereq op_not op_and_and op_or_or;
 %token paren_open paren_close;
 %token brace_open brace_close;
 %token dollar comma semicolon;
 %token kwd_if kwd_else kwd_while kwd_continue kwd_break kwd_return;
 
+Program<AstPtr>
+	: [ProgramStart]
+	| [Program] Program(0) Statement(1)
+	;
+
 Statement<AstPtr>
 	: [EmptyStatement]    semicolon
-	| [ExprStatement]     Expr(0) semicolon
-	| [AssignStatement]   ident(0) op_assign Expr(1) semicolon
+	| [ExprStatement]     Cond(0) semicolon
+	| [AssignStatement]   ident(0) op_assign Cond(1) semicolon
 	| [ContinueStatement] kwd_continue semicolon
 	| [BreakStatement]    kwd_break semicolon
 	| [ReturnStatement]   kwd_return semicolon
-	| [ReturnStatement]   kwd_return Expr(0) semicolon
+	| [ReturnStatement]   kwd_return Cond(0) semicolon
 	| [BlockStatement]    brace_open Statement*(0) brace_close
-	| [IfStatement]       kwd_if    paren_open Expr(0) paren_close Statement(1)
-	| [IfElseStatement]   kwd_if    paren_open Expr(0) paren_close Statement(1) kwd_else Statement(2)
-	| [WhileStatement]    kwd_while paren_open Expr(0) paren_close Statement(1)
+	| [IfStatement]       kwd_if    paren_open Cond(0) paren_close Statement(1)
+	| [IfElseStatement]   kwd_if    paren_open Cond(0) paren_close Statement(1) kwd_else Statement(2)
+	| [WhileStatement]    kwd_while paren_open Cond(0) paren_close Statement(1)
 	;
 
+Cond<AstPtr>
+	: [Identity]      Expr(0)
+	| [MakeNot]       op_not Cond(0)
+	| [MakeEqual]     Expr(0) op_equal Expr(1)
+	| [MakeDiffer]    Expr(0) op_differ Expr(1)
+	| [MakeLess]      Expr(0) op_less Expr(1)
+	| [MakeLessEq]    Expr(0) op_lesseq Expr(1)
+	| [MakeGreater]   Expr(0) op_greater Expr(1)
+	| [MakeGreaterEq] Expr(0) op_greatereq Expr(1)
+	| [MakeAnd]       Expr(0) op_and_and Expr(1)
+	| [MakeOr]        Expr(0) op_or_or Expr(1)
+	;
 
 Expr<AstPtr>
 	: [Identity] Term(0)

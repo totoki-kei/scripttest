@@ -39,11 +39,9 @@ int main()
 	//auto t = Tokenize(R"(if (x == 1) { do_something(); })");
 
 	std::string src = R"(
-{
 x = 250;
-if (is_zero(x)) do_something(x + 1, y, z, 20);
+if (x == 0.0) do_something(x + 1, y, z, 20);
 else do_something(x, y, z, 1000);
-}
 )";
 
 	Tokenizer<std::string::const_iterator> tokenizer(std::begin(src), std::end(src));
@@ -66,7 +64,7 @@ else do_something(x, y, z, 1000);
 		return sum;
 	});
 	env.SetVariableValue("x", 0);
-	env.SetVariableValue("y", 1);
+	env.SetVariableValue("y", 5);
 	env.SetVariableValue("z", 2);
 
 	Token t = Token::token_error; int i = -1;
@@ -100,7 +98,7 @@ else do_something(x, y, z, 1000);
 			}
 
 			auto val = std::get<AstPtr>(result)->eval(env);
-			std::cout << "Eval Result: " << val << std::endl;
+			std::cout << "Eval Result: " << val.value << std::endl;
 			break;
 		}
 	}
