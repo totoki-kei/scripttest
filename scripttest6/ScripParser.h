@@ -493,20 +493,37 @@ private:
         return push_stack(dest_index, value_type());
     }
 
-    bool call_0_MakeAdd(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeAdd(arg0, arg1);
+    bool call_0_EmptyList(Nonterminal nonterminal, int base) {
+        AstPtr r = sa_.EmptyList();
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
         return push_stack(dest_index, v);
     }
 
-    bool call_0_MakeSub(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+    bool call_0_MakeList(Nonterminal nonterminal, int base, int arg_index0) {
+        Sequence<AstPtr> arg0(sa_, stack_, seq_get_range(base, arg_index0)); 
+        AstPtr r = sa_.MakeList(arg0);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeDiv(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
         AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeSub(arg0, arg1);
+        AstPtr r = sa_.MakeDiv(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeMul(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeMul(arg0, arg1);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -516,24 +533,6 @@ private:
     bool call_0_Identity(Nonterminal nonterminal, int base, int arg_index0) {
         AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr r = sa_.Identity(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_ProgramStart(Nonterminal nonterminal, int base) {
-        AstPtr r = sa_.ProgramStart();
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_Program(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.Program(arg0, arg1);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -640,26 +639,6 @@ private:
         return push_stack(dest_index, v);
     }
 
-    bool call_0_MakeDiv(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeDiv(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeMul(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeMul(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
     bool call_0_MakeNot(Nonterminal nonterminal, int base, int arg_index0) {
         AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr r = sa_.MakeNot(arg0);
@@ -749,17 +728,38 @@ private:
         return push_stack(dest_index, v);
     }
 
-    bool call_0_EmptyList(Nonterminal nonterminal, int base) {
-        AstPtr r = sa_.EmptyList();
+    bool call_0_MakeAdd(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeAdd(arg0, arg1);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
         return push_stack(dest_index, v);
     }
 
-    bool call_0_MakeList(Nonterminal nonterminal, int base, int arg_index0) {
-        Sequence<AstPtr> arg0(sa_, stack_, seq_get_range(base, arg_index0)); 
-        AstPtr r = sa_.MakeList(arg0);
+    bool call_0_MakeSub(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeSub(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_ProgramStart(Nonterminal nonterminal, int base) {
+        AstPtr r = sa_.ProgramStart();
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_Program(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.Program(arg0, arg1);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -898,10 +898,10 @@ private:
 
     int gotof_1(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
-        case Nonterminal_Statement: return 2;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Statement: return 2;
         case Nonterminal_Cond: return 8;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -999,10 +999,10 @@ private:
 
     int gotof_3(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
-        case Nonterminal_Statement: return 76;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Statement: return 76;
         case Nonterminal_Cond: return 8;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1067,10 +1067,10 @@ private:
 
     int gotof_4(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
-        case Nonterminal_Statement: return 27;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Statement: return 27;
         case Nonterminal_Cond: return 8;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1135,10 +1135,10 @@ private:
 
     int gotof_5(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
-        case Nonterminal_Statement: return 28;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Statement: return 28;
         case Nonterminal_Cond: return 8;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1203,10 +1203,10 @@ private:
 
     int gotof_6(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
-        case Nonterminal_Statement: return 32;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Statement: return 32;
         case Nonterminal_Cond: return 8;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1360,9 +1360,9 @@ private:
 
     int gotof_11(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
         case Nonterminal_Term: return 55;
         case Nonterminal_Cond: return 12;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1550,9 +1550,9 @@ private:
 
     int gotof_18(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
         case Nonterminal_Term: return 55;
         case Nonterminal_Cond: return 20;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1773,9 +1773,9 @@ private:
 
     int gotof_25(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
         case Nonterminal_Term: return 55;
         case Nonterminal_Cond: return 26;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -1913,9 +1913,9 @@ private:
 
     int gotof_30(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
         case Nonterminal_Term: return 55;
         case Nonterminal_Cond: return 31;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2001,9 +2001,9 @@ private:
 
     int gotof_33(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 34;
         case Nonterminal_Term: return 55;
         case Nonterminal_Cond: return 35;
+        case Nonterminal_Expr: return 34;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2112,8 +2112,8 @@ private:
 
     int gotof_36(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 37;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 37;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2172,8 +2172,8 @@ private:
 
     int gotof_38(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 39;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 39;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2232,8 +2232,8 @@ private:
 
     int gotof_40(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 41;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 41;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2292,8 +2292,8 @@ private:
 
     int gotof_42(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 43;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 43;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2352,8 +2352,8 @@ private:
 
     int gotof_44(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 45;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 45;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2412,8 +2412,8 @@ private:
 
     int gotof_46(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 47;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 47;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2472,8 +2472,8 @@ private:
 
     int gotof_48(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 49;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 49;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2532,8 +2532,8 @@ private:
 
     int gotof_50(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 51;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 51;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2595,9 +2595,9 @@ private:
 
     int gotof_52(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 57;
-        case Nonterminal_Term: return 55;
         case Nonterminal_List: return 72;
+        case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 57;
         case Nonterminal_Unit: return 63;
         case Nonterminal_Expr_seq0: return 75;
         default: assert(0); return false;
@@ -2631,8 +2631,8 @@ private:
 
     int gotof_53(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 56;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 56;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }
@@ -2665,8 +2665,8 @@ private:
 
     int gotof_54(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Expr: return 58;
         case Nonterminal_Term: return 55;
+        case Nonterminal_Expr: return 58;
         case Nonterminal_Unit: return 63;
         default: assert(0); return false;
         }

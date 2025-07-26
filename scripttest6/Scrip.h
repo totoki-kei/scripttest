@@ -43,10 +43,15 @@ namespace Scrip {
 	//	virtual EvalValue GetVariableValue(const String& name) = 0;
 	//};
 
+	// フロー制御
 	enum class FlowAction {
+		// フロー制御なし
 		None,
+		// break(現在のループを終了する)
 		Break,
+		// continue(現在のループの次のイテレーションに進む)
 		Continue,
+		// return(現在の関数を終了し、値を返す)
 		Return,
 	};
 
@@ -63,6 +68,12 @@ namespace Scrip {
 		Environment(const Environment&) = default;
 		Environment(Environment&&) = default;
 
+		/// <summary>
+		/// 指定された名前と引数リストでマクロを呼び出します。
+		/// </summary>
+		/// <param name="name">呼び出すマクロの名前。</param>
+		/// <param name="args">マクロに渡す引数のリスト。</param>
+		/// <returns>マクロが見つかった場合はその評価値。見つからない場合はNaNを返します。</returns>
 		EvalValue CallMacro(const String& name, const EvalValueList& args) {
 			std::cout << "CallMacro(" << name << ", [";
 			for (const auto& v : args) {
@@ -72,9 +83,18 @@ namespace Scrip {
 			if (auto it = macro_map.find(name); it != macro_map.end()) {
 				return it->second(args);
 			}
+			if (macro_callback) {
+				auto ret = macro_callback(name, args);
+				return ret;
+			}
 			return std::nan("nan");;
 		}
 
+		/// <summary>
+		/// 指定された変数名に対応する値を取得します。
+		/// </summary>
+		/// <param name="name">取得したい変数の名前。</param>
+		/// <returns>変数名に対応する値。変数が見つからない場合は、コールバックがあればその結果を返し、どちらもなければNaNを返します。</returns>
 		EvalValue GetVariableValue(const String& name) {
 			std::cout << "GetVariableValue(" << name << ")";
 			if (auto it = variable_map.find(name); it != variable_map.end()) {
@@ -90,6 +110,14 @@ namespace Scrip {
 			return std::nan("nan");
 		}
 
+		/// <summary>
+		/// マクロを名前で登録します。
+		/// </summary>
+		/// <typeparam name="Fn">マクロ本体として使用する関数または関数オブジェクトの型。</typeparam>
+		/// <param name="name">登録するマクロの名前。</param>
+		/// <param name="macro_body">マクロの本体となる関数または関数オブジェクト。</param>
+		/// <param name="overwrite">既存のマクロを上書きするかどうか（デフォルトはfalse）。</param>
+		/// <returns>マクロの登録に成功した場合はtrue、失敗した場合はfalseを返します。</returns>
 		template <typename Fn>
 		bool RegisterMacro(const String& name, Fn macro_body, bool overwrite = false) {
 			auto it = macro_map.find(name);
@@ -105,10 +133,21 @@ namespace Scrip {
 			return false;
 		}
 
+		/// <summary>
+		/// 指定されたマクロ名の登録を解除します。
+		/// </summary>
+		/// <param name="name">登録解除するマクロの名前。</param>
 		void UnregisterMacro(const String& name) {
 			macro_map.erase(name);
 		}
 
+		/// <summary>
+		/// 指定された変数名に値を設定します。
+		/// </summary>
+		/// <param name="name">値を設定する変数の名前。</param>
+		/// <param name="value">変数に設定する値。</param>
+		/// <param name="overwrite">既存の変数の値を上書きするかどうかを指定します。デフォルトは false です。</param>
+		/// <returns>値の設定に成功した場合は true、失敗した場合は false を返します。</returns>
 		bool SetVariableValue(const String& name, EvalValue value, bool overwrite = false) {
 			std::cout << "SetVariableValue(" << name << "," << value << ")" << std::endl;
 			auto it = variable_map.find(name);
@@ -124,15 +163,32 @@ namespace Scrip {
 			return false;
 		}
 
+		/// <summary>
+		/// 指定された名前の変数を削除します。
+		/// </summary>
+		/// <param name="name">削除する変数の名前。</param>
+		/// <returns>変数が削除された場合は true、存在しなかった場合は false を返します。</returns>
 		bool DeleteVariable(const String& name) {
 			return variable_map.erase(name);
 		}
 
+		/// <summary>
+		/// マクロコールバック関数を登録します。
+		/// </summary>
+		/// <typeparam name="Fn">コールバック関数の型。</typeparam>
+		/// <param name="callback">登録するコールバック関数。</param>
+		/// <remarks>ここで登録されたコールバック関数は、 CallMacro が呼び出されたときに該当するマクロが登録されていない場合に呼び出されます。</remarks>
 		template <typename Fn>
 		void RegisterMacroCallback(Fn callback) {
 			macro_callback = callback;
 		}
 
+		/// <summary>
+		/// 変数コールバック関数を登録します。
+		/// </summary>
+		/// <typeparam name="Fn">コールバック関数の型。任意の呼び出し可能オブジェクトを指定できます。</typeparam>
+		/// <param name="callback">登録するコールバック関数。変数の変更時などに呼び出されます。</param>
+		/// <remarks>ここで登録されたコールバック関数は、 GetVariableValue が呼び出されたときに該当する変数が登録されていない場合に呼び出されます。</remarks>
 		template <typename Fn>
 		void RegisterVariableCallback(Fn callback) {
 			variable_callback = callback;
@@ -147,7 +203,9 @@ namespace Scrip {
 	};
 
 	struct EvalResult {
+		// 評価結果
 		EvalValue value;
+		// フロー制御の状態
 		FlowAction flow;
 
 		EvalResult(EvalValue value, FlowAction flow = FlowAction::None)
@@ -155,6 +213,8 @@ namespace Scrip {
 			, flow(flow)
 		{}
 	};
+
+#pragma region Ast
 
 	struct Ast {
 		struct Constant;
@@ -502,7 +562,11 @@ namespace Scrip {
 		}
 	};
 
+#pragma endregion Ast
 
+	/// <summary>
+	/// caper セマンティックアクション クラス
+	/// </summary>
 	class SemanticAction {
 		Environment& parent;
 
@@ -733,127 +797,11 @@ namespace Scrip {
 		}
 
 	};
-#if 0
-	TokenList Tokenize(const String& src) {
-		TokenList ret;
 
-		using MatchResult = std::match_results<String::const_iterator>;
-
-		struct TokenMap {
-			const char* str;
-			Token token;
-			int(_stdcall* regex_handler)(const MatchResult&, TokenList&);
-
-			static int _stdcall EmptyHandler(const MatchResult&, TokenList&) {
-				return -1;
-			}
-		};
-
-		static TokenMap tokens[] = {
-			// 2文字演算子が優先
-			{ "==", token_op_equal },
-			{ "!=", token_op_differ },
-			{ "<=", token_op_lesseq },
-			{ ">=", token_op_greater },
-			{ "<", token_op_less },
-			{ ">", token_op_greater },
-			{ "+", token_op_add },
-			{ "-", token_op_sub },
-			{ "*", token_op_mul },
-			{ "/", token_op_div },
-			{ "=", token_op_assign },
-
-			{ "(", token_paren_open },
-			{ ")", token_paren_close },
-			{ "{", token_brace_open },
-			{ "}", token_brace_close },
-			{ "$", token_dollar },
-			{ ",", token_comma },
-			{ ";", token_semicolon },
-
-			{"^if\\b", token_kwd_if, TokenMap::EmptyHandler},
-			{"^while\\b", token_kwd_while, TokenMap::EmptyHandler},
-			{"^continue\\b",token_kwd_continue, TokenMap::EmptyHandler},
-			{"^break\\b",token_kwd_break, TokenMap::EmptyHandler},
-			{"^return\\b",token_kwd_return, TokenMap::EmptyHandler},
-
-			{
-				"^[a-zA-Z_][a-zA-Z0-9_]*",
-				token_ident,
-				[](const MatchResult& match_result, TokenList& ret) -> int {
-					int index = (int)ret.values.size();
-					ret.values.push_back(match_result.str());
-					return index;
-				}
-			},
-
-			{
-				"^([0-9]*[.])?[0-9]+",
-				token_number,
-				[](const MatchResult& match_result, TokenList& ret) -> int {
-					double val = std::stod(match_result.str());
-					int index = ret.values.size();
-					ret.values.push_back(val);
-					return index;
-				}
-			},
-		};
-
-		static std::unordered_map<TokenMap*, std::regex> regex_cache;
-
-		for (auto it = src.begin(); it != src.end(); /* nop */) {
-
-			if (isspace(*it)) {
-				++it;
-				continue;
-			}
-
-			Token token = token_error;
-			size_t token_length = 0;
-			int token_index = -1;
-
-			for (auto& pattern : tokens) {
-				if (pattern.regex_handler) {
-					auto it_r = regex_cache.find(&pattern);
-					if (it_r == regex_cache.end()) {
-						auto insert_result = regex_cache.insert({ &pattern, std::regex{ pattern.str } });
-						it_r = insert_result.first;
-					}
-
-					MatchResult match_result;
-					if (std::regex_search(it, src.end(), match_result, it_r->second)) {
-						token = pattern.token;
-						token_length = match_result.length();
-						token_index = pattern.regex_handler(match_result, ret);
-						break;
-					}
-				}
-				else {
-					size_t len = strlen(pattern.str);
-					const auto ptr = &*it;
-					if (strncmp(ptr, pattern.str, len) == 0) {
-						token = pattern.token;
-						token_length = len;
-						token_index = -1;
-						break;
-					}
-				}
-			}
-
-			it += token_length;
-			ret.tokens.push_back({ token, token_index });
-
-			if (token_length == 0) {
-				// パース失敗の時点で終了する
-				break;
-			}
-		}
-
-
-
-		return ret;
-	}
-#endif
+	/// <summary>
+	/// トークナイザー クラス
+	/// </summary>
+	/// <typeparam name="Iterator">入力イテレーター</typeparam>
 	template <typename Iterator>
 	class Tokenizer {
 		using MatchResult = std::match_results<Iterator>;
@@ -861,9 +809,16 @@ namespace Scrip {
 		Iterator it;
 		Iterator end;
 		struct TokenMap {
+			// トークンの文字列または正規表現
 			const char* str;
+			// トークンの種類
 			Token token;
+
+			// 正規表現ハンドラ
+			// この値が設定されている場合、 str は正規表現として扱われる。
 			int(_stdcall* regex_handler)(const MatchResult&, std::vector<TokenValue>&);
+
+			// マッチした文字列を評価しない正規表現ハンドラ
 			static int _stdcall EmptyHandler(const MatchResult&, std::vector<TokenValue>&) {
 				return -1;
 			}
@@ -877,16 +832,25 @@ namespace Scrip {
 		std::vector<TokenValue> token_values;
 
 	public:
+		/// <summary>
+		/// イテレータ範囲からトークナイザーを初期化します。
+		/// </summary>
+		/// <param name="begin">トークナイズ対象となる入力範囲の開始イテレータ。</param>
+		/// <param name="end">トークナイズ対象となる入力範囲の終端イテレータ。</param>
 		Tokenizer(Iterator begin, Iterator end) : it(begin), end(end) {
 
+			// トークン値の初期化
 			tokens = {
-				// 2文字演算子が優先
+				// 2文字演算子
+				// (他の記号より優先してマッチング)
 				{ "==", token_op_equal },
 				{ "!=", token_op_differ },
 				{ "<=", token_op_lesseq },
 				{ ">=", token_op_greater },
 				{ "&&", token_op_and_and },
 				{ "||", token_op_or_or },
+
+				// 1文字演算子
 				{ "!", token_op_not },
 				{ "<", token_op_less },
 				{ ">", token_op_greater },
@@ -896,6 +860,7 @@ namespace Scrip {
 				{ "/", token_op_div },
 				{ "=", token_op_assign },
 
+				// 1文字トークン
 				{ "(", token_paren_open },
 				{ ")", token_paren_close },
 				{ "{", token_brace_open },
@@ -904,6 +869,7 @@ namespace Scrip {
 				{ ",", token_comma },
 				{ ";", token_semicolon },
 
+				// キーワード
 				{"^if\\b", token_kwd_if, TokenMap::EmptyHandler},
 				{"^else\\b", token_kwd_else, TokenMap::EmptyHandler},
 				{"^while\\b", token_kwd_while, TokenMap::EmptyHandler},
@@ -911,6 +877,7 @@ namespace Scrip {
 				{"^break\\b",token_kwd_break, TokenMap::EmptyHandler},
 				{"^return\\b",token_kwd_return, TokenMap::EmptyHandler},
 
+				// 識別子
 				{
 					"^[a-zA-Z_][a-zA-Z0-9_]*",
 					token_ident,
@@ -921,6 +888,7 @@ namespace Scrip {
 					}
 				},
 
+				// 数値リテラル
 				{
 					"^([0-9]*[.])?[0-9]+",
 					token_number,
@@ -935,8 +903,14 @@ namespace Scrip {
 
 		}
 
-		const TokenValue& get_value(int index) const {
-			return token_values[index];
+		template <typename T = TokenValue>
+		const T& GetTokenValue(int index) const {
+			if constexpr (std::is_same_v<T, TokenValue>) {
+				return token_values[index];
+			}
+			else {
+				return std::get<T>(token_values[index]);
+			}
 		}
 
 		bool Next(Token& out_token, int& out_value_index) {
