@@ -22,6 +22,14 @@ namespace {
 	}
 }
 
+/*************************************************/
+#define DECLARE_EXCEPTION(name, base)             \
+	class name : public base {                    \
+		public:                                   \
+		name(std::string_view msg) : base(msg) {} \
+	}                                             \
+/*************************************************/
+
 namespace Scrip {
 	class Exception : std::runtime_error {
 		std::string message;
@@ -32,13 +40,6 @@ namespace Scrip {
 		}
 	};
 
-	/*************************************************/
-#define DECLARE_EXCEPTION(name, base)             \
-	class name : public base {                    \
-		public:                                   \
-		name(std::string_view msg) : base(msg) {} \
-	}                                             \
-/*************************************************/
 
 	DECLARE_EXCEPTION(CompileErrorException, Exception);
 	DECLARE_EXCEPTION(SyntaxErrorException, CompileErrorException);
@@ -46,9 +47,9 @@ namespace Scrip {
 
 	DECLARE_EXCEPTION(RuntimeErrorException, Exception);
 
-#undef DECLARE_EXCEPTION
-
 }
+
+#undef DECLARE_EXCEPTION
 
 namespace Scrip {
 	//using String = std::string;
@@ -128,6 +129,9 @@ namespace Scrip {
 				else if constexpr (std::is_same_v<decltype(arg), void*>) {
 					return std::to_string(arg); // ポインタ型も数値として扱う
 				}
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue conversion to string");
+				}
 			}, value);
 		}
 
@@ -148,7 +152,10 @@ namespace Scrip {
 				else if constexpr (std::is_same_v<decltype(arg), void*>) {
 					return static_cast<double>(arg); // ポインタ型も数値として扱う
 				}
-				}, value);
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue conversion to number");
+				}
+			}, value);
 		}
 
 		int64_t ToInt() const {
@@ -167,6 +174,32 @@ namespace Scrip {
 				}
 				else if constexpr (std::is_same_v<decltype(arg), void*>) {
 					return reinterpret_cast<int64_t>(arg); // ポインタ型も整数として扱う
+				}
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue conversion to int");
+				}
+			}, value);
+		}
+
+		bool IsTrueValue() const {
+			return std::visit([](auto&& arg) -> bool {
+				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+					return false; // nullptrはfalse
+				}
+				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+					return !arg.empty(); // 文字列が空でない場合はtrue
+				}
+				else if constexpr (std::is_same_v<decltype(arg), double>) {
+					return arg != 0.0; // 数値が0でない場合はtrue
+				}
+				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+					return arg != 0; // 整数が0でない場合はtrue
+				}
+				else if constexpr (std::is_same_v<decltype(arg), void*>) {
+					return arg != nullptr; // ポインタがnullptrでない場合はtrue
+				}
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue truthiness check");
 				}
 			}, value);
 		}
@@ -195,7 +228,7 @@ namespace Scrip {
 				}
 			}
 			else {
-				static_assert(false, "Unsupported type for EvalValue cast");
+				throw RuntimeErrorException("Unsupported type for EvalValue cast");
 			}
 		}
 
@@ -206,13 +239,7 @@ namespace Scrip {
 		* - null型、ポインタ型はあらゆる演算を許可しない。四則演算が行われた場合はランタイムエラーを発生させる。
 		*/
 
-		template <typename Op>
-		static EvalValue ApplyUnaryOp(const EvalValue& value) {
-			return std::visit([&](auto&& arg) -> EvalValue {
-				return EvalValue(Op()(arg));
-			}, value.value);
-		}
-
+		// 二項演算子の適用（全タイプ対象）
 		template <typename Op>
 		static EvalValue ApplyBinaryOp(const EvalValue& left, const EvalValue& right) {
 			return std::visit([&](auto&& arg1, auto&& arg2) -> EvalValue {
@@ -234,12 +261,104 @@ namespace Scrip {
 					throw RuntimeErrorException("Cannot perform operation on nil types");
 				}
 				else {
-					static_assert(false, "Unsupported type for EvalValue binary operation");
+					throw RuntimeErrorException("Unsupported type for EvalValue binary operation");
 				}
 			}, left.value, right.value);
 		}
 
-	};
+		// 二項演算子の適用（文字列を除外）
+		template <typename Op>
+		static EvalValue ApplyBinaryOpNs(const EvalValue& left, const EvalValue& right) {
+			return std::visit([&](auto&& arg1, auto&& arg2) -> EvalValue {
+				using T1 = std::decay_t<decltype(arg1)>;
+				using T2 = std::decay_t<decltype(arg2)>;
+				if constexpr (std::is_same_v<T1, double> || std::is_same_v<T2, double>) {
+					return EvalValue(Op()(left.ToNumber(), right.ToNumber()));
+				}
+				else if constexpr (std::is_same_v<T1, int64_t> && std::is_same_v<T2, int64_t>) {
+					return EvalValue(Op()(left.ToInt(), right.ToInt()));
+				}
+				else if constexpr (std::is_same_v<T1, void*> || std::is_same_v<T2, void*>) {
+					throw RuntimeErrorException("Cannot perform operation on void* types");
+				}
+				else if constexpr (std::is_same_v<T1, nullptr_t> || std::is_same_v<T2, nullptr_t>) {
+					throw RuntimeErrorException("Cannot perform operation on nil types");
+				}
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue binary operation without string");
+				}
+			}, left.value, right.value);
+		}
+
+		// 二幸演算子の適用（比較演算子）
+		template <typename Op>
+		static EvalValue ApplyBinaryOpCmp(const EvalValue& left, const EvalValue& right) {
+			return std::visit([&](auto&& arg1, auto&& arg2) -> EvalValue {
+				using T1 = std::decay_t<decltype(arg1)>;
+				using T2 = std::decay_t<decltype(arg2)>;
+				if constexpr (std::is_same_v<T1, std::string> || std::is_same_v<T2, std::string>) {
+					return EvalValue(Op()(left.ToString(), right.ToString()) ? 1LL : 0LL);
+				}
+				else if constexpr (std::is_same_v<T1, double> || std::is_same_v<T2, double>) {
+					return EvalValue(Op()(left.ToNumber(), right.ToNumber()) ? 1LL : 0LL);
+				}
+				else if constexpr (std::is_same_v<T1, int64_t> && std::is_same_v<T2, int64_t>) {
+					return EvalValue(Op()(left.ToInt(), right.ToInt()) ? 1LL : 0LL);
+				}
+				else if constexpr (std::is_same_v<T1, void*> || std::is_same_v<T2, void*>) {
+					throw RuntimeErrorException("Cannot perform comparison on void* types");
+				}
+				else if constexpr (std::is_same_v<T1, nullptr_t> || std::is_same_v<T2, nullptr_t>) {
+					throw RuntimeErrorException("Cannot perform comparison on nil types");
+				}
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue binary comparison operation");
+				}
+				}, left.value, right.value);
+		}
+
+		// 二項演算子の適用（論理演算子）
+		template <typename Op>
+		static EvalValue ApplyBinaryOpLogic(const EvalValue& left, const EvalValue& right) {
+			return std::visit([&](auto&& arg1, auto&& arg2) -> EvalValue {
+				return EvalValue(Op()(left.IsTrueValue(), right.IsTrueValue()) ? 1LL : 0LL);
+			}, left.value, right.value);
+		}
+
+		// 単項演算子は数が少ないため個別実装する
+
+		// 単項 + 演算子
+		static EvalValue ApplyUnaryPosite(const EvalValue& val) {
+			return val; // 単項 + は値をそのまま返す
+		}
+
+		// 単項 - 演算子
+		static EvalValue ApplyUnaryNegate(const EvalValue& val) {
+			return std::visit([](auto&& arg) -> EvalValue {
+				using T = std::decay_t<decltype(arg)>;
+				if constexpr (std::is_same_v<T, double>) {
+					return EvalValue(-arg);
+				}
+				else if constexpr (std::is_same_v<T, int64_t>) {
+					return EvalValue(-arg);
+				}
+				else if constexpr (std::is_same_v<T, nullptr_t> || std::is_same_v<T, void*>) {
+					throw RuntimeErrorException("Cannot apply unary - to nil or void* types");
+				}
+				else {
+					throw RuntimeErrorException("Unsupported type for EvalValue unary - operation");
+				}
+			}, val.value);
+		}
+
+		// 単項 ! 演算子
+		static EvalValue ApplyUnaryNot(const EvalValue& val) {
+			return EvalValue(!val.IsTrueValue());
+		}
+
+
+	}; // EvalValue
+
 	using EvalValueList = std::vector<EvalValue>;
 
 	struct Ast;
@@ -735,9 +854,9 @@ namespace Scrip {
 		EvalResult eval(Environment& env) const override {
 			switch (op) {
 			case OP_NEGATE:
-				return EvalValue::ApplyUnaryOp<std::negate<EvalValue>>(expr->eval(env).value);
+				return EvalValue::ApplyUnaryNegate(expr->eval(env).value);
 			case OP_NOT:
-				return EvalValue::ApplyUnaryOp<std::logical_not<EvalValue>>(expr->eval(env).value);
+				return EvalValue::ApplyUnaryNot(expr->eval(env).value);
 			}
 
 			return EvalResult{nullptr};
@@ -782,30 +901,30 @@ namespace Scrip {
 		EvalResult eval(Environment& env) const override {
 			switch (op) {
 			case OP_ADD:
-				return EvalValue::ApplyBinaryOp<std::plus<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOp<std::plus<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_SUB:
-				return EvalValue::ApplyBinaryOp<std::minus<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpNs<std::minus<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_MUL:
-				return EvalValue::ApplyBinaryOp<std::multiplies<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpNs<std::multiplies<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_DIV:
-				return EvalValue::ApplyBinaryOp<std::divides<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpNs<std::divides<>>(lhs->eval(env).value, rhs->eval(env).value);
 
 			case OP_EQ:
-				return EvalValue::ApplyBinaryOp<std::equal_to<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpCmp<std::equal_to<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_DIFFER:
-				return EvalValue::ApplyBinaryOp<std::not_equal_to<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpCmp<std::not_equal_to<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_LESS:
-				return EvalValue::ApplyBinaryOp<std::less<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpCmp<std::less<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_LESSEQ:
-				return EvalValue::ApplyBinaryOp<std::less_equal<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpCmp<std::less_equal<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_GREATER:
-				return EvalValue::ApplyBinaryOp<std::greater<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpCmp<std::greater<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_GREATEREQ:
-				return EvalValue::ApplyBinaryOp<std::greater_equal<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpCmp<std::greater_equal<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_AND:
-				return EvalValue::ApplyBinaryOp<std::logical_and<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpLogic<std::logical_and<>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_OR:
-				return EvalValue::ApplyBinaryOp<std::logical_or<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
+				return EvalValue::ApplyBinaryOpLogic<std::logical_or<>>(lhs->eval(env).value, rhs->eval(env).value);
 			}
 
 			throw RuntimeErrorException("Unknown binary operator");
