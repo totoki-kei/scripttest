@@ -6,8 +6,51 @@
 #include <functional>
 #include <regex>
 
+namespace {
+	// ユーティリティクラス
+
+	template <typename Fn>
+	struct ScopeExit {
+		Fn fn;
+		ScopeExit(Fn&& fn) : fn(std::forward<Fn>(fn)) {}
+		~ScopeExit() { fn(); }
+	};
+
+	template <typename Enum>
+	bool HasFlag(Enum value, Enum flag) {
+		return (static_cast<int>(value) & static_cast<int>(flag)) != 0;
+	}
+}
+
 namespace Scrip {
-	using String = std::string;
+	//using String = std::string;
+	struct String {
+		std::string s;
+		size_t hash;
+
+		String() : s(""), hash(0) {}
+		String(const char* str) : s(str), hash(std::hash<std::string>()(str)) {}
+		String(const std::string& str) : s(str), hash(std::hash<std::string>()(str)) {}
+
+		bool operator==(const String& other) const {
+			if (hash != other.hash) return false;
+			return s == other.s;
+		}
+
+		friend std::ostream& operator<<(std::ostream& os, const String& str) {
+			os << str.s;
+			return os;
+		}
+
+		// std::stringへの暗黙変換を許可
+		operator std::string& () {
+			return s;
+		}
+
+		operator const std::string& () const {
+			return s;
+		}
+	};
 	using EvalValue = double;
 	using EvalValueList = std::vector<EvalValue>;
 
@@ -17,13 +60,42 @@ namespace Scrip {
 	using ParseValue = std::variant<AstPtr, String, EvalValue>;
 }
 
+namespace std {
+	template <>
+	struct hash<Scrip::String> {
+		size_t operator()(const Scrip::String& str) const noexcept {
+			return str.hash;
+		}
+	};
+}
+
 #include "ScripParser.h"
+
 
 namespace Scrip {
 
-	class Exception {};
-	class StackOverflowException : Exception {};
-	class SyntaxErrorException : Exception {};
+	class Exception : std::runtime_error {
+		std::string message;
+	public:
+		Exception(std::string_view msg) : std::runtime_error(std::string(msg)), message(msg) {}
+		const char* what() const noexcept override {
+			return message.c_str();
+		}
+	};
+
+/*************************************************/
+#define DECLARE_EXCEPTION(name, base)             \
+	class name : public base {                    \
+		public:                                   \
+		name(std::string_view msg) : base(msg) {} \
+	}                                             \
+/*************************************************/
+
+	DECLARE_EXCEPTION(CompileErrorException, Exception);
+	DECLARE_EXCEPTION(SyntaxErrorException, CompileErrorException);
+	DECLARE_EXCEPTION(CompilationStackOverflowException, CompileErrorException);
+
+	DECLARE_EXCEPTION(RuntimeErrorException, Exception);
 
 	using TokenValue = std::variant<EvalValue, EvalValueList, String>;
 	struct TokenList {
@@ -55,14 +127,72 @@ namespace Scrip {
 		Return,
 	};
 
+	// 変数格納時のモード
+	enum StoreModeFlags {
+		VAR_MODE_CREATE = 0x01, // 変数が存在しない場合は新規作成する
+		VAR_MODE_UPDATE = 0x02, // 変数が存在する場合は上書きする
 
+		VAR_MODE_GLOBAL = 0x10, // グローバル変数として格納する
+		VAR_MODE_LOCAL = 0x20, // ローカル変数として格納する(グローバル変数を参照しない)
+		
+		VAR_MODE_TOPFRAME = 0x40, // フレームスタックの最上位フレームに格納する
+
+
+		/*
+		* VAR_MODE_GLOBAL と VAR_MODE_LOCAL は、一方のみ指定されたときのみ効果を有する。両方指定時とどちらも指定していないときは同じ振る舞いとなる。
+		* VAR_MODE_TOPFRAME は、ローカル変数が操作対象である場合にのみ機能する。
+		*/
+	};
+
+	class StackFrame {
+		std::unordered_map<String, EvalValue> variable_map;
+
+	public:
+		EvalValue GetVariableValue(const String& name) {
+			if (auto it = variable_map.find(name); it != variable_map.end()) {
+				return it->second;
+			}
+			return std::nan("nan");
+		}
+
+		bool SetVariableValue(const String& name, EvalValue value, StoreModeFlags mode) {
+			auto it = variable_map.find(name);
+			if (it == variable_map.end() || it->first != name) {
+				// insert
+				if (HasFlag(mode, VAR_MODE_CREATE)) {
+					variable_map.insert(std::make_pair(name, value));
+					return true;
+				}
+				else {
+					return false;
+				}
+			}
+			else if (HasFlag(mode, VAR_MODE_UPDATE)) {
+				it->second = value;
+				return true;
+			}
+			return false;
+		}
+
+		bool DeleteVariable(const String& name, StoreModeFlags /*mode*/) {
+			auto it = variable_map.find(name);
+			if (it != variable_map.end()) {
+				variable_map.erase(it);
+				return true;
+			}
+			return false;
+		}
+
+		bool IsVariableDefined(const String& name) const {
+			return variable_map.find(name) != variable_map.end();
+		}
+	};
 
 	class Environment {
 	public:
 		using Macro = std::function<EvalValue(const EvalValueList&)>;
 		using VariableCallback = std::function<EvalValue(const String&)>;
 		using MacroCallback = std::function<EvalValue(const String&, const EvalValueList&)>;
-
 
 		Environment() = default;
 		Environment(const Environment&) = default;
@@ -97,6 +227,15 @@ namespace Scrip {
 		/// <returns>変数名に対応する値。変数が見つからない場合は、コールバックがあればその結果を返し、どちらもなければNaNを返します。</returns>
 		EvalValue GetVariableValue(const String& name) {
 			std::cout << "GetVariableValue(" << name << ")";
+
+			// フレームスタック -> グローバル(環境定義) -> コールバック の順に探索
+			for (auto it = frame_stack.rbegin(); it != frame_stack.rend(); ++it) {
+				if (auto value = it->GetVariableValue(name); !std::isnan(value)) {
+					std::cout << " = " << value << std::endl;
+					return value;
+				}
+			}
+
 			if (auto it = variable_map.find(name); it != variable_map.end()) {
 				std::cout << " = " << it->second << std::endl;
 				return it->second;
@@ -116,21 +255,9 @@ namespace Scrip {
 		/// <typeparam name="Fn">マクロ本体として使用する関数または関数オブジェクトの型。</typeparam>
 		/// <param name="name">登録するマクロの名前。</param>
 		/// <param name="macro_body">マクロの本体となる関数または関数オブジェクト。</param>
-		/// <param name="overwrite">既存のマクロを上書きするかどうか（デフォルトはfalse）。</param>
-		/// <returns>マクロの登録に成功した場合はtrue、失敗した場合はfalseを返します。</returns>
 		template <typename Fn>
-		bool RegisterMacro(const String& name, Fn macro_body, bool overwrite = false) {
-			auto it = macro_map.find(name);
-			if (it == macro_map.end() || it->first != name) {
-				// insert
-				macro_map.insert(it, std::make_pair(name, Macro(macro_body)));
-				return true;
-			}
-			else if (overwrite) {
-				it->second = Macro(macro_body);
-				return true;
-			}
-			return false;
+		void RegisterMacro(const String& name, Fn macro_body) {
+			macro_map[name] = Macro(macro_body);
 		}
 
 		/// <summary>
@@ -148,19 +275,56 @@ namespace Scrip {
 		/// <param name="value">変数に設定する値。</param>
 		/// <param name="overwrite">既存の変数の値を上書きするかどうかを指定します。デフォルトは false です。</param>
 		/// <returns>値の設定に成功した場合は true、失敗した場合は false を返します。</returns>
-		bool SetVariableValue(const String& name, EvalValue value, bool overwrite = false) {
+		bool SetVariableValue(const String& name, EvalValue value, StoreModeFlags mode) {
 			std::cout << "SetVariableValue(" << name << "," << value << ")" << std::endl;
-			auto it = variable_map.find(name);
-			if (it == variable_map.end() || it->first != name) {
-				// insert
-				variable_map.insert(std::make_pair(name, value));
-				return true;
+
+			bool to_local = !HasFlag(mode, VAR_MODE_GLOBAL) || HasFlag(mode, VAR_MODE_LOCAL);
+			bool to_global = !HasFlag(mode, VAR_MODE_LOCAL) || HasFlag(mode, VAR_MODE_GLOBAL);
+
+			// フレームスタックが一つ以上存在している場合は、フレームスタック内の変数として格納する
+			if (to_local) {
+				bool search_all_frame = !HasFlag(mode, VAR_MODE_TOPFRAME);
+				for (auto it = frame_stack.rbegin(); it != frame_stack.rend(); ++it) {
+					if (it->SetVariableValue(name, value, mode)) {
+						std::cout << " -> FrameStack" << std::endl;
+						return true;
+					}
+
+					if (!search_all_frame) {
+						// VAR_MODE_TOPFRAME が指定されている場合、最上位フレームのみを対象とする
+						break;
+					}
+				}
 			}
-			else if (overwrite) {
-				it->second = value;
-				return true;
+
+			if (to_global) {
+				auto it = variable_map.find(name);
+				if (it == variable_map.end() || it->first != name) {
+					if (HasFlag(mode, VAR_MODE_CREATE)) {
+						// 変数が存在しない場合は新規作成
+						std::cout << " -> Global Variable" << std::endl;
+						variable_map.insert(std::make_pair(name, value));
+						return true;
+					}
+					else {
+						std::cout << " -> Variable not found, not created" << std::endl;
+						return false; // 変数が存在しない場合は何もしない
+					}
+				}
+
+				// 変数が存在している
+				if (HasFlag(mode, VAR_MODE_UPDATE)) {
+					it->second = value;
+					return true;
+				}
+				else {
+					std::cout << " -> Variable already exists, not updated" << std::endl;
+					return false;
+				}
 			}
+
 			return false;
+
 		}
 
 		/// <summary>
@@ -168,8 +332,28 @@ namespace Scrip {
 		/// </summary>
 		/// <param name="name">削除する変数の名前。</param>
 		/// <returns>変数が削除された場合は true、存在しなかった場合は false を返します。</returns>
-		bool DeleteVariable(const String& name) {
-			return variable_map.erase(name);
+		bool DeleteVariable(const String& name, StoreModeFlags mode) {
+
+			bool to_local = !HasFlag(mode, VAR_MODE_GLOBAL) || HasFlag(mode, VAR_MODE_LOCAL);
+			bool to_global = !HasFlag(mode, VAR_MODE_LOCAL) || HasFlag(mode, VAR_MODE_GLOBAL);
+
+			if (to_local) {
+				bool search_all_frame = !HasFlag(mode, VAR_MODE_TOPFRAME);
+				for (auto it = frame_stack.rbegin(); it != frame_stack.rend(); ++it) {
+					if (it->DeleteVariable(name, mode)) {
+						return true;
+					}
+
+					if (!search_all_frame) {
+						// VAR_MODE_TOPFRAME が指定されている場合、最上位フレームのみを対象とする
+						break;
+					}
+				}
+			}
+
+			if (to_global) {
+				return variable_map.erase(name);
+			}
 		}
 
 		/// <summary>
@@ -194,9 +378,32 @@ namespace Scrip {
 			variable_callback = callback;
 		}
 
+		size_t GetFrameCount() const {
+			return frame_stack.size();
+		}
+
+		StackFrame GetCurrentFrame() const {
+			if (frame_stack.empty()) {
+				throw std::runtime_error("No stack frame available");
+			}
+			return frame_stack.back();
+		}
+
+		void PushFrame() {
+			frame_stack.emplace_back();
+		}
+
+		void PopFrame() {
+			if (frame_stack.empty()) {
+				throw std::runtime_error("No stack frame to pop");
+			}
+			frame_stack.pop_back();
+		}
+
 	private:
 		std::unordered_map<String, Macro> macro_map;
 		std::unordered_map<String, EvalValue> variable_map;
+		std::vector<StackFrame> frame_stack;
 
 		MacroCallback macro_callback;
 		VariableCallback variable_callback;
@@ -232,10 +439,40 @@ namespace Scrip {
 
 		struct FlowControl;
 
+		struct IdentList;
+
+		struct Function;
+		struct VariableDeclaration;
+
+		struct Program;
+
 		virtual ~Ast() = default;
 		virtual std::string to_string() const = 0;
 		virtual EvalResult eval(Environment& env) const = 0;
 	};
+
+
+	// Programクラスの宣言のみ先に記述する 実装は後で行う
+	struct Ast::Program : public Ast {
+		friend struct Ast;
+
+		std::vector<AstPtr> functions;
+		std::vector<AstPtr> variables;
+
+		std::string to_string() const override;
+
+		EvalResult eval(Environment& env) const override;
+		EvalResult EvalFunction(const String entry_point, EvalValueList args, Environment& env) const;
+		EvalResult CallFunction(const String entry_point, EvalValueList args, Environment& env) const;
+
+	private:
+		bool StoreProgramPtrToEnvironment(Environment& env) const;
+		void ClearProgramPtrFromEnvironment(Environment& env) const;
+
+	public:
+		static const Program* FromEnvironment(Environment& env);
+	};
+
 
 	struct Ast::Constant : public Ast {
 		EvalValue value;
@@ -252,14 +489,12 @@ namespace Scrip {
 
 	struct Ast::VarRef : public Ast {
 		String name;
-		size_t name_hash;
 
 		VarRef(const String& name)
-			: name(name)
-			, name_hash(std::hash<String>()(name)) {}
+			: name(name) {}
 
 		std::string to_string() const override {
-			return "VarRef(" + name + ")";
+			return "VarRef(" + name.s + ")";
 		}
 		EvalResult eval(Environment& env) const override {
 			return env.GetVariableValue(name);
@@ -411,16 +646,14 @@ namespace Scrip {
 
 	struct Ast::Call : public Ast {
 		String name;
-		size_t name_hash;
 		AstPtr args;
 
 		Call(const String& name, const AstPtr& args)
 			: name(name)
-			, name_hash(std::hash<String>()(name))
 			, args(args) {}
 
 		std::string to_string() const override {
-			return "Call(" + name + "(" + args->to_string() + "))";
+			return "Call(" + name.s + "(" + args->to_string() + "))";
 		}
 
 		EvalResult eval(Environment& env) const override {
@@ -430,6 +663,16 @@ namespace Scrip {
 					arg_values.push_back(e->eval(env).value);
 				}
 			}
+
+			auto program = Program::FromEnvironment(env);
+			if (program) {
+				// 該当する関数があれば呼び出す
+				auto ret = program->CallFunction(name, arg_values, env);
+				if (!std::isnan(ret.value)) {
+					return EvalResult(ret.value); // 関数が見つかり、値が返された
+				}
+			}
+
 			return env.CallMacro(name, arg_values);
 		}
 	};
@@ -443,11 +686,11 @@ namespace Scrip {
 			, expr(expr) {}
 
 		std::string to_string() const override {
-			return "Assign(" + name + " = " + expr->to_string() + ")";
+			return "Assign(" + name.s + " = " + expr->to_string() + ")";
 		}
 
 		EvalResult eval(Environment& env) const override {
-			return env.SetVariableValue(name, expr->eval(env).value, true);
+			return env.SetVariableValue(name, expr->eval(env).value, StoreModeFlags(VAR_MODE_CREATE | VAR_MODE_UPDATE));
 		}
 
 	};
@@ -556,11 +799,181 @@ namespace Scrip {
 			case CONTROL_RETURN:
 				return { expr ? expr->eval(env).value : 0.0, FlowAction::Return };
 			case CONTROL_RETURN_VOID:
-				return { 0.0, FlowAction::Return };
+				return { std::nan("void"), FlowAction::Return};
 			}
 			return 0.0;
 		}
 	};
+
+	struct Ast::IdentList : public Ast {
+		std::vector<String> names; // 複数の識別子を保持するリスト
+		IdentList() = default;
+		void add(const String& name) {
+			names.push_back(name);
+		}
+		std::string to_string() const override {
+			std::string s = "IdentList(";
+			for (const auto& name : names) {
+				s += name.s + ",";
+			}
+			s += ")";
+			return s;
+		}
+		EvalResult eval(Environment& env) const override {
+			// IdentListを評価してはいけない
+			throw RuntimeErrorException("Invalid AST Call");
+		}
+	};
+
+	struct Ast::Function : public Ast {
+		String name;
+		std::vector<String> arg_names; // 引数名のリスト
+		AstPtr body;
+		Function(const String& name, const AstPtr& argslist, const AstPtr& body)
+			: name(name)
+			, body(body)
+		{
+			if (auto list = std::dynamic_pointer_cast<Ast::IdentList>(argslist)) {
+				for (const auto& arg_name : list->names) {
+					arg_names.push_back(arg_name);
+				}
+			}
+			else {
+				throw SyntaxErrorException("Invalid Argument Pointer");
+			}
+		}
+		std::string to_string() const override {
+			return "Function(" + name.s + " : " + body->to_string() + ")";
+		}
+		EvalResult eval(Environment& env) const override {
+			return eval(EvalValueList(), env);
+		}
+
+		EvalResult eval(const EvalValueList& args, Environment& env) const {
+			env.PushFrame();
+			for (size_t i = 0; i < arg_names.size(); ++i) {
+				if (i < args.size()) {
+					// 引数が足りない場合は0.0を設定
+					env.SetVariableValue(arg_names[i], args[i], VAR_MODE_CREATE);
+				}
+				else {
+					env.SetVariableValue(arg_names[i], 0.0, VAR_MODE_CREATE);
+				}
+			}
+			
+			EvalResult ret = 0.0;
+			if (auto body_list = std::dynamic_pointer_cast<List>(body)) {
+				bool returned = false;
+				for (const auto& stmt : body_list->list) {
+					ret = stmt->eval(env);
+					if (ret.flow != FlowAction::None) {
+						// フロー制御が発生した場合はそのまま返す
+						returned = true;
+						break;
+					}
+				}
+
+				// returnが内部で発生しなかった場合は、戻り値なしとする
+				if (!returned) {
+					ret.value = std::nan("void");
+				}
+			}
+			else {
+				// 単一のステートメントの場合
+				ret = body->eval(env);
+				if (ret.flow == FlowAction::Return) {
+					ret.value = ret.value; // return値をそのまま返す
+				}
+			}
+
+			env.PopFrame();
+			return EvalResult(ret.value); // FlowActionは無視
+		}
+	};
+
+	struct Ast::VariableDeclaration : public Ast {
+		String name;
+		AstPtr init_value;
+		VariableDeclaration(const String& name, const AstPtr& init_value = AstPtr())
+			: name(name)
+			, init_value(init_value) {}
+		std::string to_string() const override {
+			return "Variable(" + name.s + " = " + (init_value ? init_value->to_string() : "undefined") + ")";
+		}
+		EvalResult eval(Environment& env) const override {
+			EvalValue value = init_value ? init_value->eval(env).value : 0.0;
+			env.SetVariableValue(name, value, VAR_MODE_CREATE);
+			return value;
+		}
+	};
+
+
+	std::string Ast::Program::to_string() const {
+		std::string s = "Program(...)"; // 簡易的な出力のみ
+		return s;
+	}
+
+	EvalResult Ast::Program::eval(Environment& env) const {
+		return EvalFunction("main", EvalValueList(), env);
+	}
+
+	EvalResult Ast::Program::EvalFunction(const String entry_point, EvalValueList args, Environment& env) const {
+		if (!StoreProgramPtrToEnvironment(env)) {
+			// 設定に失敗 別のプログラムが動作中
+			throw RuntimeErrorException("Invalid Program State");
+		}
+
+		// variablesを評価して環境に登録
+		for (const auto& var : variables) {
+			var->eval(env);
+		}
+
+		auto ret = CallFunction(entry_point, args, env);
+
+		ClearProgramPtrFromEnvironment(env);
+
+		return ret;
+	}
+
+	EvalResult Ast::Program::CallFunction(const String entry_point, EvalValueList args, Environment& env) const {
+		// functionsからエントリーポイントの関数を探して実行
+		for (const auto& func : functions) {
+			if (auto decl = std::dynamic_pointer_cast<Function>(func)) {
+				if (decl->name == entry_point) {
+					return decl->eval(args, env);
+				}
+			}
+		}
+		// エントリーポイントが見つからない場合はエラー
+		return nan("nan");
+	}
+
+	bool Ast::Program::StoreProgramPtrToEnvironment(Environment& env) const {
+		// ポインタ値(64bit)をEvalValue(double: 64bit)に強制格納
+		union {
+			const void* ptr;
+			EvalValue value;
+		} u{ this };
+
+		return env.SetVariableValue("@@program", u.value, StoreModeFlags(VAR_MODE_CREATE | VAR_MODE_GLOBAL));
+	}
+
+	void Ast::Program::ClearProgramPtrFromEnvironment(Environment& env) const {
+		env.DeleteVariable("@@program", StoreModeFlags(VAR_MODE_GLOBAL));
+	}
+
+	const Ast::Program* Ast::Program::FromEnvironment(Environment& env) {
+		// 環境からProgramポインタを取得
+		EvalValue prog_value = env.GetVariableValue("@@program");
+		if (std::isnan(prog_value)) {
+			return nullptr; // プログラムが登録されていない
+		}
+		union {
+			EvalValue value;
+			const void* ptr;
+		} u{ prog_value };
+		return static_cast<const Program*>(u.ptr);
+	}
 
 #pragma endregion Ast
 
@@ -574,8 +987,8 @@ namespace Scrip {
 
 		SemanticAction(Environment& ev) : parent(ev) {}
 
-		void stack_overflow() { throw StackOverflowException(); }
-		void syntax_error() { throw SyntaxErrorException(); }
+		void stack_overflow() { throw CompilationStackOverflowException("Compilation Stack overflow"); }
+		void syntax_error() { throw SyntaxErrorException("SYntax Error"); }
 
 		template <typename FromT>
 		void upcast(ParseValue& to, const FromT& from) {
@@ -590,13 +1003,23 @@ namespace Scrip {
 		// ProgramStart
 		AstPtr ProgramStart() {
 			std::cout << "<ProgramStart>" << std::endl;
-			return std::make_shared<Ast::List>();
+			return std::make_shared<Ast::Program>();
 		}
 		
-		// Program(Stmt}
-		AstPtr Program(const AstPtr& prog, const AstPtr & stmt) {
+		// Program(Decl}
+		AstPtr Program(const AstPtr& prog, const AstPtr & decl) {
 			std::cout << "<Program>" << std::endl;
-			std::dynamic_pointer_cast<Ast::List>(prog)->list.push_back(stmt);
+			auto prog_typed = std::dynamic_pointer_cast<Ast::Program>(prog);
+			if (auto func_decl = std::dynamic_pointer_cast<Ast::Function>(decl)) {
+				prog_typed->functions.push_back(func_decl);
+			}
+			else if (auto var_decl = std::dynamic_pointer_cast<Ast::VariableDeclaration>(decl)) {
+				prog_typed->variables.push_back(var_decl);
+			}
+			else {
+				std::cerr << "Unknown declaration type in Program" << std::endl;
+			}
+
 			return prog;
 		}
 
@@ -671,7 +1094,7 @@ namespace Scrip {
 		//ReturnStatement(Expr)
 		AstPtr ReturnStatement(const AstPtr& expr = AstPtr{}) {
 			std::cout << "<ReturnStatement>" << std::endl;
-			return std::make_shared<Ast::FlowControl>(expr ? Ast::FlowControl::CONTROL_RETURN : Ast::FlowControl::CONTROL_RETURN_VOID);
+			return std::make_shared<Ast::FlowControl>(expr ? Ast::FlowControl::CONTROL_RETURN : Ast::FlowControl::CONTROL_RETURN_VOID, expr);
 		}
 
 
@@ -796,6 +1219,41 @@ namespace Scrip {
 			return std::make_shared<Ast::List>(exprs.begin(), exprs.end());
 		}
 
+		// EmptyIdentList
+		AstPtr EmptyIdentList() {
+			std::cout << "<EmptyIdentList>" << std::endl;
+			return std::make_shared<Ast::IdentList>();
+		}
+
+		// MakeIdentList(std::Sequence<String>)
+		template <template <typename> typename Sequence>
+		AstPtr MakeIdentList(Sequence<String> names) {
+			std::cout << "<MakeIdentList>" << std::endl;
+			auto ident_list = std::make_shared<Ast::IdentList>();
+			for (const auto& name : names) {
+				ident_list->add(name);
+			}
+			return ident_list;
+		}
+
+		// FunctionDeclaration(ident, list)
+		AstPtr FunctionDeclaration(const String& name, const AstPtr& argslist, const AstPtr& body) {
+			std::cout << "<FunctionDeclaration>" << std::endl;
+			return std::make_shared<Ast::Function>(name, argslist, body);
+		}
+
+		// VariableDeclaration(ident)
+		AstPtr VariableDeclaration(const String& name, const AstPtr& init_value = AstPtr{}) {
+			std::cout << "<VariableDeclaration>" << std::endl;
+			return std::make_shared<Ast::VariableDeclaration>(name, init_value);
+		}
+
+		// VariableDeclaration(ident, value)
+		AstPtr VariableDeclaration(const String& name, const EvalValue& init_value) {
+			std::cout << "<VariableDeclaration>" << std::endl;
+			return std::make_shared<Ast::VariableDeclaration>(name, std::make_shared<Ast::Constant>(init_value));
+		}
+
 	};
 
 	/// <summary>
@@ -876,6 +1334,8 @@ namespace Scrip {
 				{"^continue\\b",token_kwd_continue, TokenMap::EmptyHandler},
 				{"^break\\b",token_kwd_break, TokenMap::EmptyHandler},
 				{"^return\\b",token_kwd_return, TokenMap::EmptyHandler},
+				{"^func\\b", token_kwd_func, TokenMap::EmptyHandler},
+				{"^var\\b", token_kwd_var, TokenMap::EmptyHandler},
 
 				// 識別子
 				{

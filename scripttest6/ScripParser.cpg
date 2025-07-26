@@ -13,10 +13,17 @@
 %token brace_open brace_close;
 %token dollar comma semicolon;
 %token kwd_if kwd_else kwd_while kwd_continue kwd_break kwd_return;
+%token kwd_func kwd_var;
 
 Program<AstPtr>
 	: [ProgramStart]
-	| [Program] Program(0) Statement(1)
+	| [Program] Program(0) Declaration(1)
+	;
+
+Declaration<AstPtr>
+	: [FunctionDeclaration] kwd_func ident(0) paren_open IdentList(1) paren_close Statement(2)
+	| [VariableDeclaration] kwd_var ident(0) semicolon
+	| [VariableDeclaration] kwd_var ident(0) op_assign Cond(1) semicolon
 	;
 
 Statement<AstPtr>
@@ -71,3 +78,7 @@ List<AstPtr>
 	| [MakeList] Expr/comma(0)
 	;
 
+IdentList<AstPtr>
+	: [EmptyIdentList]
+	| [MakeIdentList] ident/comma(0)
+	;

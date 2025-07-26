@@ -39,9 +39,28 @@ int main()
 	//auto t = Tokenize(R"(if (x == 1) { do_something(); })");
 
 	std::string src = R"(
-x = 250;
-if (x == 0.0) do_something(x + 1, y, z, 20);
-else do_something(x, y, z, 1000);
+func main () {
+	i = 0;
+	while (i < 10) {
+		if (i == 2) {
+			i = i + 1;
+			continue;
+		}
+		print(i, hoge(i, i+2, i*2));
+		i = i + 1;
+	}
+}
+
+func hoge(x, y, z) {
+	if (!is_zero(x)) {
+		print(x);
+	}
+	if (!is_zero(y)) {
+		print(y);
+	}
+	return x + y + z;
+}
+
 )";
 
 	// ソースのトークン化
@@ -66,11 +85,19 @@ else do_something(x, y, z, 1000);
 		std::cout << ")" << std::endl;
 		return sum;
 	});
+	env.RegisterMacro("print", [](const EvalValueList& args) {
+		std::cout << "print(";
+		for (const auto& v : args) {
+			std::cout << v << ",";
+		}
+		std::cout << ")" << std::endl;
+		return 0.0; // printは値を返さない
+	});
 
 	// 変数の登録
-	env.SetVariableValue("x", 0);
-	env.SetVariableValue("y", 5);
-	env.SetVariableValue("z", 2);
+	env.SetVariableValue("x", 0, Scrip::VAR_MODE_CREATE);
+	env.SetVariableValue("y", 5, Scrip::VAR_MODE_CREATE);
+	env.SetVariableValue("z", 2, Scrip::VAR_MODE_CREATE);
 
 	// 解析ループ
 	Token t = Token::token_error; int i = -1;
@@ -109,8 +136,10 @@ else do_something(x, y, z, 1000);
 			}
 
 			// パーサが返したASTを評価
+			std::cout << "********* START EVAL *********" << std::endl;
 			auto val = std::get<AstPtr>(result)->eval(env);
 			std::cout << "Eval Result: " << val.value << std::endl;
+			std::cout << "********* END EVAL *********" << std::endl;
 			break;
 		}
 	}
