@@ -20,7 +20,7 @@ std::ostream& operator<<(std::ostream& os, const Scrip::TokenValue& value) {
 			}
 			std::cout << "]";
 		}
-		void operator()(const Scrip::String& value) {
+		void operator()(const Scrip::StringName& value) {
 			std::cout << "'" << value << "'";
 		}
 	};
@@ -119,7 +119,7 @@ func hoge(x, y, z) {
 				accepted = parser.post(t, (tokenizer.GetTokenValue<EvalValue>(i)));
 				break;
 			case Token::token_ident:
-				accepted = parser.post(t, (tokenizer.GetTokenValue<String>(i)) );
+				accepted = parser.post(t, (tokenizer.GetTokenValue<StringName>(i)) );
 				break;
 			default:
 				accepted = parser.post(t, 0.0);

@@ -5,7 +5,7 @@
 %allow_ebnf;
 
 %token number<EvalValue>;
-%token ident<String>;
+%token ident<StringName>;
 %token op_add op_sub op_mul op_div;
 %token op_assign;
 %token op_equal op_differ op_less op_lesseq op_greater op_greatereq op_not op_and_and op_or_or;
