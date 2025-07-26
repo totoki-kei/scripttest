@@ -80,7 +80,7 @@ func hoge(x, y, z) {
 		std::cout << "do_something(";
 		for (const auto& v : args) {
 			std::cout << v << ",";
-			sum += v;
+			sum += v.ToNumber();
 		}
 		std::cout << ")" << std::endl;
 		return sum;
@@ -95,9 +95,9 @@ func hoge(x, y, z) {
 	});
 
 	// 変数の登録
-	env.SetVariableValue("x", 0, Scrip::VAR_MODE_CREATE);
-	env.SetVariableValue("y", 5, Scrip::VAR_MODE_CREATE);
-	env.SetVariableValue("z", 2, Scrip::VAR_MODE_CREATE);
+	env.SetVariableValue("x", 0.0, Scrip::VAR_MODE_CREATE);
+	env.SetVariableValue("y", 5.4, Scrip::VAR_MODE_CREATE);
+	env.SetVariableValue("z", 2.25, Scrip::VAR_MODE_CREATE);
 
 	// 解析ループ
 	Token t = Token::token_error; int i = -1;

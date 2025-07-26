@@ -23,6 +23,34 @@ namespace {
 }
 
 namespace Scrip {
+	class Exception : std::runtime_error {
+		std::string message;
+	public:
+		Exception(std::string_view msg) : std::runtime_error(std::string(msg)), message(msg) {}
+		const char* what() const noexcept override {
+			return message.c_str();
+		}
+	};
+
+	/*************************************************/
+#define DECLARE_EXCEPTION(name, base)             \
+	class name : public base {                    \
+		public:                                   \
+		name(std::string_view msg) : base(msg) {} \
+	}                                             \
+/*************************************************/
+
+	DECLARE_EXCEPTION(CompileErrorException, Exception);
+	DECLARE_EXCEPTION(SyntaxErrorException, CompileErrorException);
+	DECLARE_EXCEPTION(CompilationStackOverflowException, CompileErrorException);
+
+	DECLARE_EXCEPTION(RuntimeErrorException, Exception);
+
+#undef DECLARE_EXCEPTION
+
+}
+
+namespace Scrip {
 	//using String = std::string;
 	struct StringName {
 		std::string s;
@@ -55,7 +83,163 @@ namespace Scrip {
 			return s;
 		}
 	};
-	using EvalValue = double;
+	//using EvalValue = std::variant<double, std::string, intptr_t>;
+	struct EvalValue{
+		std::variant<
+			nullptr_t, // 値なし(nil)
+			double,    // 数値
+			std::string, // 文字列
+			int64_t, // 整数型(boolも兼ねる)
+			void* // 内部データポインタ
+		> value;
+		EvalValue() : value(nullptr) {}
+		EvalValue(double v) : value(v) {}
+		EvalValue(const std::string& v) : value(v) {}
+		EvalValue(int64_t v) : value(v) {}
+		EvalValue(bool v) : value(v ? 1LL : 0LL) {} // boolをint64_tに変換
+		EvalValue(void* v) : value(v) {}
+
+		bool operator==(const EvalValue& other) const {
+			return value == other.value;
+		}
+		friend std::ostream& operator<<(std::ostream& os, const EvalValue& ev) {
+			std::visit([&os](auto&& arg) { os << arg; }, ev.value);
+			return os;
+		}
+
+		bool IsNil() const {
+			return std::holds_alternative<nullptr_t>(value);
+		}
+
+		std::string ToString() const {
+			return std::visit([](auto&& arg) -> std::string {
+				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+					return "nil"; // nullptrは"nil"として扱う
+				}
+				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+					return arg; // 文字列の場合はそのまま
+				}
+				else if constexpr (std::is_same_v<decltype(arg), double>) {
+					return std::to_string(arg); // 数値の場合は文字列に変換
+				}
+				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+					return std::to_string(arg); // 整数型も文字列に変換
+				}
+				else if constexpr (std::is_same_v<decltype(arg), void*>) {
+					return std::to_string(arg); // ポインタ型も数値として扱う
+				}
+			}, value);
+		}
+
+		double ToNumber() const {
+			return std::visit([](auto&& arg) -> double {
+				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+					return 0.0; // nullptrは0.0として扱う
+				}
+				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+					return std::stod(arg); // 文字列を数値に変換
+				}
+				else if constexpr (std::is_same_v<decltype(arg), double>) {
+					return arg; // 数値はそのまま
+				}
+				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+					return static_cast<double>(arg); // 整数型も数値として扱う
+				}
+				else if constexpr (std::is_same_v<decltype(arg), void*>) {
+					return static_cast<double>(arg); // ポインタ型も数値として扱う
+				}
+				}, value);
+		}
+
+		int64_t ToInt() const {
+			return std::visit([](auto&& arg) -> int64_t {
+				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+					return 0; // nullptrは0として扱う
+				}
+				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+					return std::stoll(arg); // 文字列を整数に変換
+				}
+				else if constexpr (std::is_same_v<decltype(arg), double>) {
+					return static_cast<int64_t>(arg); // 数値は整数に変換
+				}
+				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+					return arg; // 整数はそのまま
+				}
+				else if constexpr (std::is_same_v<decltype(arg), void*>) {
+					return reinterpret_cast<int64_t>(arg); // ポインタ型も整数として扱う
+				}
+			}, value);
+		}
+
+		template <typename T>
+		EvalValue CastTo() const {
+			if constexpr (std::is_same_v<T, EvalValue>) {
+				return EvalValue{}; // nulloptを返す
+			}
+			else if constexpr (std::is_same_v<T, std::string>) {
+				return EvalValue(ToString());
+			}
+			else if constexpr (std::is_same_v<T, double>) {
+				return EvalValue(ToNumber());
+			}
+			else if constexpr (std::is_same_v<T, int64_t>) {
+				return EvalValue(ToInt());
+			}
+			else if constexpr (std::is_same_v<T, void*>) {
+				// 変換は許可しない 元の値が void* の時だった場合のみ値を返す
+				if (std::holds_alternative<void*>(value)) {
+					return EvalValue(std::get<void*>(value));
+				}
+				else {
+					throw std::bad_variant_access(); // void* 以外の型からの変換は許可しない
+				}
+			}
+			else {
+				static_assert(false, "Unsupported type for EvalValue cast");
+			}
+		}
+
+		/*
+		* 演算の方針
+		* - 文字列は加算のみ対応。左辺値か右辺値のどちらかが文字列だった場合、文字列に揃えて連結する。
+		* - 数値は加算、減算、乗算、除算に対応。どちらか一方がdoubleならばdoubleで、両方が整数なら整数のまま演算する。
+		* - null型、ポインタ型はあらゆる演算を許可しない。四則演算が行われた場合はランタイムエラーを発生させる。
+		*/
+
+		template <typename Op>
+		static EvalValue ApplyUnaryOp(const EvalValue& value) {
+			return std::visit([&](auto&& arg) -> EvalValue {
+				return EvalValue(Op()(arg));
+			}, value.value);
+		}
+
+		template <typename Op>
+		static EvalValue ApplyBinaryOp(const EvalValue& left, const EvalValue& right) {
+			return std::visit([&](auto&& arg1, auto&& arg2) -> EvalValue {
+				using T1 = std::decay_t<decltype(arg1)>;
+				using T2 = std::decay_t<decltype(arg2)>;
+				if constexpr (std::is_same_v<T1, std::string> || std::is_same_v<T2, std::string>) {
+					return EvalValue(Op()(left.ToString(), right.ToString()));
+				}
+				else if constexpr (std::is_same_v<T1, double> || std::is_same_v<T2, double>) {
+					return EvalValue(Op()(left.ToNumber(), right.ToNumber()));
+				}
+				else if constexpr (std::is_same_v<T1, int64_t> && std::is_same_v<T2, int64_t>) {
+					return EvalValue(Op()(left.ToInt(), right.ToInt()));
+				}
+				else if constexpr (std::is_same_v<T1, void*> || std::is_same_v<T2, void*>) {
+					throw RuntimeErrorException("Cannot perform operation on void* types");
+				}
+				else if constexpr (std::is_same_v<T1, nullptr_t> || std::is_same_v<T2, nullptr_t>) {
+					throw RuntimeErrorException("Cannot perform operation on nil types");
+				}
+				else {
+					static_assert(false, "Unsupported type for EvalValue binary operation");
+				}
+			}, left.value, right.value);
+		}
+
+	};
 	using EvalValueList = std::vector<EvalValue>;
 
 	struct Ast;
@@ -80,31 +264,6 @@ namespace std {
 
 
 namespace Scrip {
-
-	class Exception : std::runtime_error {
-		std::string message;
-	public:
-		Exception(std::string_view msg) : std::runtime_error(std::string(msg)), message(msg) {}
-		const char* what() const noexcept override {
-			return message.c_str();
-		}
-	};
-
-/*************************************************/
-#define DECLARE_EXCEPTION(name, base)             \
-	class name : public base {                    \
-		public:                                   \
-		name(std::string_view msg) : base(msg) {} \
-	}                                             \
-/*************************************************/
-
-	DECLARE_EXCEPTION(CompileErrorException, Exception);
-	DECLARE_EXCEPTION(SyntaxErrorException, CompileErrorException);
-	DECLARE_EXCEPTION(CompilationStackOverflowException, CompileErrorException);
-
-	DECLARE_EXCEPTION(RuntimeErrorException, Exception);
-
-#undef DECLARE_EXCEPTION
 
 	using TokenValue = std::variant<EvalValue, EvalValueList, StringName>;
 	struct TokenList {
@@ -161,7 +320,7 @@ namespace Scrip {
 			if (auto it = variable_map.find(name); it != variable_map.end()) {
 				return it->second;
 			}
-			return std::nan("nan");
+			return { nullptr }; // 変数が見つからない場合はnilを返す
 		}
 
 		bool SetVariableValue(const StringName& name, EvalValue value, StoreModeFlags mode) {
@@ -212,7 +371,7 @@ namespace Scrip {
 		/// </summary>
 		/// <param name="name">呼び出すマクロの名前。</param>
 		/// <param name="args">マクロに渡す引数のリスト。</param>
-		/// <returns>マクロが見つかった場合はその評価値。見つからない場合はNaNを返します。</returns>
+		/// <returns>マクロが見つかった場合はその評価値。見つからない場合はnilを返します。</returns>
 		EvalValue CallMacro(const StringName& name, const EvalValueList& args) {
 			std::cout << "CallMacro(" << name << ", [";
 			for (const auto& v : args) {
@@ -226,20 +385,21 @@ namespace Scrip {
 				auto ret = macro_callback(name, args);
 				return ret;
 			}
-			return std::nan("nan");;
+			
+			throw RuntimeErrorException("Macro not found: " + std::string(name));
 		}
 
 		/// <summary>
 		/// 指定された変数名に対応する値を取得します。
 		/// </summary>
 		/// <param name="name">取得したい変数の名前。</param>
-		/// <returns>変数名に対応する値。変数が見つからない場合は、コールバックがあればその結果を返し、どちらもなければNaNを返します。</returns>
+		/// <returns>変数名に対応する値。変数が見つからない場合は、コールバックがあればその結果を返し、どちらもなければnilを返します。</returns>
 		EvalValue GetVariableValue(const StringName& name) {
 			std::cout << "GetVariableValue(" << name << ")";
 
 			// フレームスタック -> グローバル(環境定義) -> コールバック の順に探索
 			for (auto it = frame_stack.rbegin(); it != frame_stack.rend(); ++it) {
-				if (auto value = it->GetVariableValue(name); !std::isnan(value)) {
+				if (auto value = it->GetVariableValue(name); !value.IsNil()) {
 					std::cout << " = " << value << std::endl;
 					return value;
 				}
@@ -254,8 +414,8 @@ namespace Scrip {
 				std::cout << " = " << ret << std::endl;
 				return ret;
 			}
-			std::cout << " = nan" << std::endl;
-			return std::nan("nan");
+			
+			return { nullptr }; // 変数が見つからない場合はnilを返す
 		}
 
 		/// <summary>
@@ -491,7 +651,7 @@ namespace Scrip {
 		Constant(EvalValue value) : value(value) {}
 
 		std::string to_string() const override {
-			return "Constant(" + std::to_string(value) + ")";
+			return "Constant(" + value.ToString() + ")";
 		}
 		EvalResult eval(Environment& env) const override {
 			return value;
@@ -536,7 +696,7 @@ namespace Scrip {
 
 		EvalResult eval(Environment& env) const override {
 			// Listが直接evalされることは通常ない
-			EvalResult result = 0.0;
+			EvalResult result{ 0.0 };
 			for (const auto& e : list) {
 				result = e->eval(env);
 			}
@@ -575,12 +735,12 @@ namespace Scrip {
 		EvalResult eval(Environment& env) const override {
 			switch (op) {
 			case OP_NEGATE:
-				return { -expr->eval(env).value };
+				return EvalValue::ApplyUnaryOp<std::negate<EvalValue>>(expr->eval(env).value);
 			case OP_NOT:
-				return expr->eval(env).value == 0.0 ? 1.0 : 0.0;
+				return EvalValue::ApplyUnaryOp<std::logical_not<EvalValue>>(expr->eval(env).value);
 			}
 
-			return nan("nan");
+			return EvalResult{nullptr};
 		}
 	};
 
@@ -622,35 +782,33 @@ namespace Scrip {
 		EvalResult eval(Environment& env) const override {
 			switch (op) {
 			case OP_ADD:
-				return lhs->eval(env).value + rhs->eval(env).value;
+				return EvalValue::ApplyBinaryOp<std::plus<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_SUB:
-				return lhs->eval(env).value - rhs->eval(env).value;
+				return EvalValue::ApplyBinaryOp<std::minus<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_MUL:
-				return lhs->eval(env).value * rhs->eval(env).value;
+				return EvalValue::ApplyBinaryOp<std::multiplies<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_DIV:
-				return lhs->eval(env).value / rhs->eval(env).value;
+				return EvalValue::ApplyBinaryOp<std::divides<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 
 			case OP_EQ:
-				return lhs->eval(env).value == rhs->eval(env).value ? 1.0 : 0.0;
+				return EvalValue::ApplyBinaryOp<std::equal_to<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_DIFFER:
-				return lhs->eval(env).value != rhs->eval(env).value ? 1.0 : 0.0;
+				return EvalValue::ApplyBinaryOp<std::not_equal_to<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_LESS:
-				return lhs->eval(env).value < rhs->eval(env).value ? 1.0 : 0.0;
+				return EvalValue::ApplyBinaryOp<std::less<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_LESSEQ:
-				return lhs->eval(env).value <= rhs->eval(env).value ? 1.0 : 0.0;
+				return EvalValue::ApplyBinaryOp<std::less_equal<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_GREATER:
-				return lhs->eval(env).value > rhs->eval(env).value ? 1.0 : 0.0;
+				return EvalValue::ApplyBinaryOp<std::greater<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_GREATEREQ:
-				return lhs->eval(env).value >= rhs->eval(env).value ? 1.0 : 0.0;
-
+				return EvalValue::ApplyBinaryOp<std::greater_equal<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_AND:
-				return lhs->eval(env).value != 0.0 && rhs->eval(env).value != 0.0 ? 1.0 : 0.0;
+				return EvalValue::ApplyBinaryOp<std::logical_and<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			case OP_OR:
-				return lhs->eval(env).value != 0.0 || rhs->eval(env).value != 0.0 ? 1.0 : 0.0;
-
+				return EvalValue::ApplyBinaryOp<std::logical_or<EvalValue>>(lhs->eval(env).value, rhs->eval(env).value);
 			}
 
-			return nan("nan");
+			throw RuntimeErrorException("Unknown binary operator");
 		}
 
 	};
@@ -679,7 +837,7 @@ namespace Scrip {
 			if (program) {
 				// 該当する関数があれば呼び出す
 				auto ret = program->CallFunction(name, arg_values, env);
-				if (!std::isnan(ret.value)) {
+				if (!ret.value.IsNil()) {
 					return EvalResult(ret.value); // 関数が見つかり、値が返された
 				}
 			}
@@ -701,7 +859,8 @@ namespace Scrip {
 		}
 
 		EvalResult eval(Environment& env) const override {
-			return env.SetVariableValue(name, expr->eval(env).value, StoreModeFlags(VAR_MODE_CREATE | VAR_MODE_UPDATE));
+			env.SetVariableValue(name, expr->eval(env).value, StoreModeFlags(VAR_MODE_CREATE | VAR_MODE_UPDATE));
+			return { nullptr };
 		}
 
 	};
@@ -751,7 +910,7 @@ namespace Scrip {
 		}
 
 		EvalResult eval(Environment& env) const override {
-			EvalResult result = 0.0;
+			EvalResult result{ 0.0 };
 			bool continue_flag = false;
 
 			do {
@@ -760,7 +919,7 @@ namespace Scrip {
 					result = stmt->eval(env);
 					auto flow_state = result.flow;
 					if (flow_state == FlowAction::Break) {
-						return 0.0;
+						return { 0.0 };
 					}
 					else if (flow_state == FlowAction::Return) {
 						return { result.value };
@@ -804,15 +963,15 @@ namespace Scrip {
 		EvalResult eval(Environment& env) const override {
 			switch (control) {
 			case CONTROL_CONTINUE:
-				return { 0.0, FlowAction::Continue };
+				return { nullptr, FlowAction::Continue };
 			case CONTROL_BREAK:
-				return { 0.0, FlowAction::Break };
+				return { nullptr, FlowAction::Break };
 			case CONTROL_RETURN:
-				return { expr ? expr->eval(env).value : 0.0, FlowAction::Return };
+				return { expr ? expr->eval(env).value : nullptr, FlowAction::Return };
 			case CONTROL_RETURN_VOID:
-				return { std::nan("void"), FlowAction::Return};
+				return { nullptr, FlowAction::Return};
 			}
-			return 0.0;
+			return { nullptr };
 		}
 	};
 
@@ -872,7 +1031,7 @@ namespace Scrip {
 				}
 			}
 			
-			EvalResult ret = 0.0;
+			EvalResult ret{ 0.0 };
 			if (auto body_list = std::dynamic_pointer_cast<List>(body)) {
 				bool returned = false;
 				for (const auto& stmt : body_list->list) {
@@ -886,7 +1045,7 @@ namespace Scrip {
 
 				// returnが内部で発生しなかった場合は、戻り値なしとする
 				if (!returned) {
-					ret.value = std::nan("void");
+					ret.value = nullptr;
 				}
 			}
 			else {
@@ -956,17 +1115,11 @@ namespace Scrip {
 			}
 		}
 		// エントリーポイントが見つからない場合はエラー
-		return nan("nan");
+		throw RuntimeErrorException("Function not found: " + entry_point.s);
 	}
 
 	bool Ast::Program::StoreProgramPtrToEnvironment(Environment& env) const {
-		// ポインタ値(64bit)をEvalValue(double: 64bit)に強制格納
-		union {
-			const void* ptr;
-			EvalValue value;
-		} u{ this };
-
-		return env.SetVariableValue("@@program", u.value, StoreModeFlags(VAR_MODE_CREATE | VAR_MODE_GLOBAL));
+		return env.SetVariableValue("@@program", { const_cast<void*>(static_cast<const void*>(this)) }, StoreModeFlags(VAR_MODE_CREATE | VAR_MODE_GLOBAL));
 	}
 
 	void Ast::Program::ClearProgramPtrFromEnvironment(Environment& env) const {
@@ -976,14 +1129,7 @@ namespace Scrip {
 	const Ast::Program* Ast::Program::FromEnvironment(Environment& env) {
 		// 環境からProgramポインタを取得
 		EvalValue prog_value = env.GetVariableValue("@@program");
-		if (std::isnan(prog_value)) {
-			return nullptr; // プログラムが登録されていない
-		}
-		union {
-			EvalValue value;
-			const void* ptr;
-		} u{ prog_value };
-		return static_cast<const Program*>(u.ptr);
+		return static_cast<const Program*>(std::get<void*>(prog_value.value));
 	}
 
 #pragma endregion Ast
@@ -1354,7 +1500,7 @@ namespace Scrip {
 					token_ident,
 					[](const MatchResult& match_result, std::vector<TokenValue>& values) -> int {
 						int index = (int)values.size();
-						values.push_back(match_result.str());
+						values.push_back(StringName(match_result.str()));
 						return index;
 					}
 				},
