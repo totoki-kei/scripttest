@@ -1,6 +1,7 @@
 #ifndef SCRIPT_H_
 #define SCRIPT_H_
 
+#include <string>
 #include <functional>
 #include <memory>
 #include <vector>

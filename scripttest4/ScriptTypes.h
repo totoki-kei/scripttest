@@ -110,9 +110,11 @@ namespace Script {
 	class IntType;
 	class NumberType;
 	class StringType;
-	class ObjectType;
+	class DictionaryType;
 
-
+	/// <summary>
+	/// 変数データを格納するメモリ領域
+	/// </summary>
 	struct ValueStorage {
 		union {
 			void* ptr;
@@ -120,12 +122,18 @@ namespace Script {
 			int64_t integer;
 		};
 
+		ValueStorage() : integer(0) {}
+
 		void FillZero() {
 			integer = 0;
 		}
 	};
 
+	static_assert(sizeof(ValueStorage) == sizeof(void*), "unexpected ValueStorage size.");
 
+	/// <summary>
+	/// 型情報とメモリ領域を持った変数情報
+	/// </summary>
 	struct Value {
 		ValueStorage stor;
 		TypeTrait* type;
@@ -135,23 +143,37 @@ namespace Script {
 
 	};
 
-	static_assert(sizeof(ValueStorage) == 64 / 8, "unexpected ValueStorage size.");
 
+
+	// Valueのサイズはポインタ４つ分とする
+	static_assert(sizeof(Value) == sizeof(void*) * 4, "unexpected Value size.");
+
+	/// <summary>
+	/// 型情報
+	/// </summary>
 	class TypeTrait {
 	public:
 
 		virtual ~TypeTrait() = 0;
 
+		/// <summary>
+		/// 型名を取得する
+		/// </summary>
+		/// <returns></returns>
 		virtual const char* GetName() const = 0;
 
 		/// <summary>
 		/// デフォルトコンストラクタ
-		/// 型の初期値を設定する
+		/// 指定のValueStorageにこの型の初期値を設定する
 		/// </summary>
 		virtual void DefaultConstruct(ValueStorage& stor) {
 			stor.FillZero();
 		};
 
+		/// <summary>
+		/// コピーコンストラクタ
+		/// ValueStorage間で値をコピーする
+		/// </summary>
 		virtual bool CopyConstruct(ValueStorage& stor, const ValueStorage& val) {
 			stor = val;
 			return true;
@@ -159,16 +181,27 @@ namespace Script {
 		
 		/// <summary>
 		/// デストラクタ
-		/// 値を破棄する
+		/// 指定のValueStorage内の値を破棄する
 		/// </summary>
 		virtual void Destruct(ValueStorage& stor) {
 			
 		};
 
-
+		/// <summary>
+		/// 型変換結果コード
+		/// </summary>
 		enum ConversionResult {
+			/// <summary>
+			/// 変換に失敗
+			/// </summary>
 			CONVERSION_FAIL = 0,
+			/// <summary>
+			/// 変換成功
+			/// </summary>
 			CONVERSION_SUCCESS,
+			/// <summary>
+			/// 変換は不要のため実施されなかった
+			/// </summary>
 			CONVERSION_NOT_NECESSARY,
 		};
 
@@ -198,7 +231,7 @@ namespace Script {
 		複雑な型に変換関数を多めに実装する。
 
 		(1) 先にConvertToを行う
-			=> 元の型の変換方針を尊重
+			-> 元の型の変換方針を尊重
 		(2) ConvertToに失敗した場合はConvertFromを行う
 			-> 複雑な型の場合、こちらを使う(Construct方法などを知っているため)
 		(3) 両方ともに失敗した場合は変換失敗と見なす(スクリプト実行時エラー)
@@ -218,7 +251,9 @@ namespace Script {
 		return &trait_instance;
 	}
 
-
+	/// <summary>
+	/// 組み込み型 Nil の型情報
+	/// </summary>
 	class NilType : public TypeTrait {
 	public:
 		using Base = TypeTrait;
@@ -232,6 +267,9 @@ namespace Script {
 		}
 	};
 
+	/// <summary>
+	/// 組み込み型 Int の型情報
+	/// </summary>
 	class IntType : public TypeTrait {
 	public:
 		using Base = TypeTrait;
@@ -251,6 +289,9 @@ namespace Script {
 
 	};
 
+	/// <summary>
+	/// 組み込み型 Number の型情報
+	/// </summary>
 	class NumberType : public TypeTrait {
 	public:
 		using Base = TypeTrait;
@@ -268,16 +309,37 @@ namespace Script {
 			return Base::ConvertFrom(stor, from, out_result);
 		}
 	};
-	class StringType;
+
+	class StringType : public TypeTrait {
+	public:
+		using Base = TypeTrait;
+		const char* GetName() const override {
+			return "String";
+		}
+		void DefaultConstruct(ValueStorage& stor) override {
+			stor.ptr = new std::string();
+		};
+		bool CopyConstruct(ValueStorage& stor, const ValueStorage& val) override {
+			auto* str = new std::string();
+			auto* left_str = static_cast<std::string*>(val.ptr);
+			str->assign(*left_str);
+			stor.ptr = str;
+		}
+
+		void Destruct(ValueStorage& stor) override {
+			auto* str = static_cast<std::string*>(stor.ptr);
+			delete str;
+		}
+	};
 
 
-	class ObjectType : public TypeTrait {
+	class DictionaryType : public TypeTrait {
 		using Base = TypeTrait;
 
 		using MapType = std::map<std::string, Value>;
 
 		const char* GetName() const override {
-			return "Object";
+			return "Dictionary";
 		}
 
 		void DefaultConstruct(ValueStorage& stor) override {
@@ -289,18 +351,27 @@ namespace Script {
 			auto* left_map = static_cast<MapType*>(val.ptr);
 
 			for (auto& keyval : *left_map) {
-				MapType::value_type newval;
-				newval.first = keyval.first;
-				
-				keyval.second.type->CopyConstruct(newval.second.stor, keyval.second.stor);
-				newval.second.type = keyval.second.type;
-				newval.second.ref = 1;
-				newval.second.tag = nullptr;
+				std::string newkey;
 
-				map->insert(newval);
+				newkey = keyval.first;
+				
+				Value newval = {};
+				keyval.second.type->CopyConstruct(newval.stor, keyval.second.stor);
+				newval.type = keyval.second.type;
+				newval.ref = 1;
+				newval.tag = nullptr;
+
+				map->insert(std::make_pair(newkey, newval));
 			}
 		}
 
+		void Destruct(ValueStorage& stor) override {
+			auto* map = static_cast<MapType*>(stor.ptr);
+			for (auto& keyval : *map) {
+				keyval.second.type->Destruct(keyval.second.stor);
+			}
+			delete map;
+		}
 	};
 
 
