@@ -126,9 +126,6 @@ namespace Scrip {
 				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
 					return std::to_string(arg); // 整数型も文字列に変換
 				}
-				else if constexpr (std::is_same_v<decltype(arg), void*>) {
-					return std::to_string(arg); // ポインタ型も数値として扱う
-				}
 				else {
 					throw RuntimeErrorException("Unsupported type for EvalValue conversion to string");
 				}
@@ -137,20 +134,18 @@ namespace Scrip {
 
 		double ToNumber() const {
 			return std::visit([](auto&& arg) -> double {
-				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+				using T = std::decay_t<decltype(arg)>;
+				if constexpr (std::is_same_v<T, nullptr_t>) {
 					return 0.0; // nullptrは0.0として扱う
 				}
-				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+				else if constexpr (std::is_same_v<T, std::string>) {
 					return std::stod(arg); // 文字列を数値に変換
 				}
-				else if constexpr (std::is_same_v<decltype(arg), double>) {
+				else if constexpr (std::is_same_v<T, double>) {
 					return arg; // 数値はそのまま
 				}
-				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+				else if constexpr (std::is_same_v<T, int64_t>) {
 					return static_cast<double>(arg); // 整数型も数値として扱う
-				}
-				else if constexpr (std::is_same_v<decltype(arg), void*>) {
-					return static_cast<double>(arg); // ポインタ型も数値として扱う
 				}
 				else {
 					throw RuntimeErrorException("Unsupported type for EvalValue conversion to number");
@@ -160,20 +155,18 @@ namespace Scrip {
 
 		int64_t ToInt() const {
 			return std::visit([](auto&& arg) -> int64_t {
-				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+				using T = std::decay_t<decltype(arg)>;
+				if constexpr (std::is_same_v<T, nullptr_t>) {
 					return 0; // nullptrは0として扱う
 				}
-				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+				else if constexpr (std::is_same_v<T, std::string>) {
 					return std::stoll(arg); // 文字列を整数に変換
 				}
-				else if constexpr (std::is_same_v<decltype(arg), double>) {
+				else if constexpr (std::is_same_v<T, double>) {
 					return static_cast<int64_t>(arg); // 数値は整数に変換
 				}
-				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+				else if constexpr (std::is_same_v<T, int64_t>) {
 					return arg; // 整数はそのまま
-				}
-				else if constexpr (std::is_same_v<decltype(arg), void*>) {
-					return reinterpret_cast<int64_t>(arg); // ポインタ型も整数として扱う
 				}
 				else {
 					throw RuntimeErrorException("Unsupported type for EvalValue conversion to int");
@@ -183,19 +176,20 @@ namespace Scrip {
 
 		bool IsTrueValue() const {
 			return std::visit([](auto&& arg) -> bool {
+				using T = std::decay_t<decltype(arg)>;
 				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
 					return false; // nullptrはfalse
 				}
-				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+				else if constexpr (std::is_same_v<T, std::string>) {
 					return !arg.empty(); // 文字列が空でない場合はtrue
 				}
-				else if constexpr (std::is_same_v<decltype(arg), double>) {
+				else if constexpr (std::is_same_v<T, double>) {
 					return arg != 0.0; // 数値が0でない場合はtrue
 				}
-				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+				else if constexpr (std::is_same_v<T, int64_t>) {
 					return arg != 0; // 整数が0でない場合はtrue
 				}
-				else if constexpr (std::is_same_v<decltype(arg), void*>) {
+				else if constexpr (std::is_same_v<T, void*>) {
 					return arg != nullptr; // ポインタがnullptrでない場合はtrue
 				}
 				else {
@@ -439,7 +433,7 @@ namespace Scrip {
 			if (auto it = variable_map.find(name); it != variable_map.end()) {
 				return it->second;
 			}
-			return { nullptr }; // 変数が見つからない場合はnilを返す
+			return EvalValue(); // 変数が見つからない場合はnilを返す
 		}
 
 		bool SetVariableValue(const StringName& name, EvalValue value, StoreModeFlags mode) {
@@ -534,7 +528,7 @@ namespace Scrip {
 				return ret;
 			}
 			
-			return { nullptr }; // 変数が見つからない場合はnilを返す
+			return {}; // 変数が見つからない場合はnilを返す
 		}
 
 		/// <summary>
@@ -705,6 +699,8 @@ namespace Scrip {
 		// フロー制御の状態
 		FlowAction flow;
 
+		EvalResult() = default;
+
 		EvalResult(EvalValue value, FlowAction flow = FlowAction::None)
 			: value(value)
 			, flow(flow)
@@ -753,7 +749,7 @@ namespace Scrip {
 
 		EvalResult eval(Environment& env) const override;
 		EvalResult EvalFunction(const StringName entry_point, EvalValueList args, Environment& env) const;
-		EvalResult CallFunction(const StringName entry_point, EvalValueList args, Environment& env) const;
+		bool CallFunction(const StringName entry_point, EvalValueList args, EvalResult& out_result, Environment& env) const;
 
 	private:
 		bool StoreProgramPtrToEnvironment(Environment& env) const;
@@ -815,9 +811,13 @@ namespace Scrip {
 
 		EvalResult eval(Environment& env) const override {
 			// Listが直接evalされることは通常ない
-			EvalResult result{ 0.0 };
+			EvalResult result{ };
 			for (const auto& e : list) {
 				result = e->eval(env);
+				if (result.flow != FlowAction::None) {
+					result.flow = FlowAction::None;
+					break;
+				}
 			}
 			return result;
 		}
@@ -955,9 +955,10 @@ namespace Scrip {
 			auto program = Program::FromEnvironment(env);
 			if (program) {
 				// 該当する関数があれば呼び出す
-				auto ret = program->CallFunction(name, arg_values, env);
-				if (!ret.value.IsNil()) {
-					return EvalResult(ret.value); // 関数が見つかり、値が返された
+				auto ret = EvalResult{ {} };
+				if (program->CallFunction(name, arg_values, ret, env)) {
+					ret.flow = FlowAction::None;
+					return ret;
 				}
 			}
 
@@ -1007,11 +1008,11 @@ namespace Scrip {
 		}
 
 		EvalResult eval(Environment& env) const override {
-			if (expr->eval(env).value != 0.0) {
-				return true_part ? true_part->eval(env).value : 0.0;
+			if (expr->eval(env).value.IsTrueValue()) {
+				return true_part ? true_part->eval(env) : EvalResult{};
 			}
 			else {
-				return false_part ? false_part->eval(env).value : 0.0;
+				return false_part ? false_part->eval(env) : EvalResult{};
 			}
 		}
 	};
@@ -1029,19 +1030,21 @@ namespace Scrip {
 		}
 
 		EvalResult eval(Environment& env) const override {
-			EvalResult result{ 0.0 };
+			EvalResult result{ };
 			bool continue_flag = false;
 
 			do {
 				continue_flag = false;
-				while (expr->eval(env).value != 0.0) {
+				while (expr->eval(env).value.IsTrueValue()) {
 					result = stmt->eval(env);
 					auto flow_state = result.flow;
 					if (flow_state == FlowAction::Break) {
-						return { 0.0 };
+						// loop break;
+						result.flow = FlowAction::None; // flow stateをリセット
+						return result;
 					}
 					else if (flow_state == FlowAction::Return) {
-						return { result.value };
+						return result; // return値をそのまま返す
 					}
 					else if (flow_state == FlowAction::Continue) {
 						continue_flag = true;
@@ -1142,20 +1145,19 @@ namespace Scrip {
 			env.PushFrame();
 			for (size_t i = 0; i < arg_names.size(); ++i) {
 				if (i < args.size()) {
-					// 引数が足りない場合は0.0を設定
 					env.SetVariableValue(arg_names[i], args[i], VAR_MODE_CREATE);
 				}
 				else {
-					env.SetVariableValue(arg_names[i], 0.0, VAR_MODE_CREATE);
+					env.SetVariableValue(arg_names[i], nullptr, VAR_MODE_CREATE);
 				}
 			}
 			
-			EvalResult ret{ 0.0 };
+			EvalResult ret{ };
 			if (auto body_list = std::dynamic_pointer_cast<List>(body)) {
 				bool returned = false;
 				for (const auto& stmt : body_list->list) {
 					ret = stmt->eval(env);
-					if (ret.flow != FlowAction::None) {
+					if (ret.flow == FlowAction::Return) {
 						// フロー制御が発生した場合はそのまま返す
 						returned = true;
 						break;
@@ -1170,9 +1172,6 @@ namespace Scrip {
 			else {
 				// 単一のステートメントの場合
 				ret = body->eval(env);
-				if (ret.flow == FlowAction::Return) {
-					ret.value = ret.value; // return値をそのまま返す
-				}
 			}
 
 			env.PopFrame();
@@ -1190,7 +1189,7 @@ namespace Scrip {
 			return "Variable(" + name.s + " = " + (init_value ? init_value->to_string() : "undefined") + ")";
 		}
 		EvalResult eval(Environment& env) const override {
-			EvalValue value = init_value ? init_value->eval(env).value : 0.0;
+			EvalValue value = init_value ? init_value->eval(env).value : EvalValue{ nullptr };
 			env.SetVariableValue(name, value, VAR_MODE_CREATE);
 			return value;
 		}
@@ -1217,24 +1216,25 @@ namespace Scrip {
 			var->eval(env);
 		}
 
-		auto ret = CallFunction(entry_point, args, env);
+		EvalResult ret;
+		bool called = CallFunction(entry_point, args, ret, env);
 
 		ClearProgramPtrFromEnvironment(env);
 
 		return ret;
 	}
 
-	EvalResult Ast::Program::CallFunction(const StringName entry_point, EvalValueList args, Environment& env) const {
+	bool Ast::Program::CallFunction(const StringName entry_point, EvalValueList args, EvalResult& out_result, Environment& env) const {
 		// functionsからエントリーポイントの関数を探して実行
 		for (const auto& func : functions) {
 			if (auto decl = std::dynamic_pointer_cast<Function>(func)) {
 				if (decl->name == entry_point) {
-					return decl->eval(args, env);
+					out_result = decl->eval(args, env);
+					return true;
 				}
 			}
 		}
-		// エントリーポイントが見つからない場合はエラー
-		throw RuntimeErrorException("Function not found: " + entry_point.s);
+		return false;
 	}
 
 	bool Ast::Program::StoreProgramPtrToEnvironment(Environment& env) const {
