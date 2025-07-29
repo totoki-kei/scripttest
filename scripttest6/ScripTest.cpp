@@ -40,6 +40,7 @@ int main()
 
 	std::string src = R"(
 func main () {
+	print("Start" + " main");
 	i = 0;
 	while (i < 10) {
 		if (i == 2) {
@@ -49,9 +50,11 @@ func main () {
 		print(i, hoge(i, i+2, i*2));
 		i = i + 1;
 	}
+	print("End main");
 }
 
 func hoge(x, y, z) {
+
 	if (!is_zero(x)) {
 		print(x);
 	}
@@ -115,7 +118,7 @@ func hoge(x, y, z) {
 		// パーサへpush
 		bool accepted = false;
 		switch (t) {
-			case Token::token_number:
+			case Token::token_literal:
 				accepted = parser.post(t, (tokenizer.GetTokenValue<EvalValue>(i)));
 				break;
 			case Token::token_ident:

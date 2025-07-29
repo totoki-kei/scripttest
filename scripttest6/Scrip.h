@@ -114,16 +114,17 @@ namespace Scrip {
 
 		std::string ToString() const {
 			return std::visit([](auto&& arg) -> std::string {
-				if constexpr (std::is_same_v<decltype(arg), nullptr_t>) {
+				using T = std::decay_t<decltype(arg)>;
+				if constexpr (std::is_same_v<T, nullptr_t>) {
 					return "nil"; // nullptrは"nil"として扱う
 				}
-				else if constexpr (std::is_same_v<decltype(arg), std::string>) {
+				else if constexpr (std::is_same_v<T, std::string>) {
 					return arg; // 文字列の場合はそのまま
 				}
-				else if constexpr (std::is_same_v<decltype(arg), double>) {
+				else if constexpr (std::is_same_v<T, double>) {
 					return std::to_string(arg); // 数値の場合は文字列に変換
 				}
-				else if constexpr (std::is_same_v<decltype(arg), int64_t>) {
+				else if constexpr (std::is_same_v<T, int64_t>) {
 					return std::to_string(arg); // 整数型も文字列に変換
 				}
 				else {
@@ -1627,11 +1628,22 @@ namespace Scrip {
 				// 数値リテラル
 				{
 					"^([0-9]*[.])?[0-9]+",
-					token_number,
+					token_literal,
 					[](const MatchResult& match_result, std::vector<TokenValue>& values) -> int {
 						double val = std::stod(match_result.str());
 						int index = (int)values.size();
-						values.push_back(val);
+						values.emplace_back(val);
+						return index;
+					}
+				},
+				// 文字列リテラル
+				{
+					"^\"([^\"]*)\"",
+					token_literal,
+					[](const MatchResult& match_result, std::vector<TokenValue>& values) -> int {
+						std::string str = match_result.str(1); // キャプチャグループ1を取得
+						int index = (int)values.size();
+						values.emplace_back(EvalValue{ str });
 						return index;
 					}
 				},

@@ -4,7 +4,7 @@
 %recover error;
 %allow_ebnf;
 
-%token number<EvalValue>;
+%token literal<EvalValue>;
 %token ident<StringName>;
 %token op_add op_sub op_mul op_div;
 %token op_assign;
@@ -66,7 +66,7 @@ Term<AstPtr>
 	;
 
 Unit<AstPtr>
-	: [Identity] number(0)
+	: [Identity] literal(0)
 	| [Negate] op_sub Unit(0)
 	| [MakeCall] ident(0) paren_open List(1) paren_close
 	| [Variable] ident(0)
