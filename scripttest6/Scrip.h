@@ -84,15 +84,34 @@ namespace Scrip {
 			return s;
 		}
 	};
-	//using EvalValue = std::variant<double, std::string, intptr_t>;
+	
+	struct TypeTraitBase {};
+
+	template <typename ValueT>
+	struct TypeTrait : TypeTraitBase {
+
+	};
+
 	struct EvalValue{
-		std::variant<
-			nullptr_t, // 値なし(nil)
-			double,    // 数値
-			std::string, // 文字列
-			int64_t, // 整数型(boolも兼ねる)
-			void* // 内部データポインタ
-		> value;
+		union {
+			int8_t i8[16];
+			int16_t i16[8];
+			int32_t i8[4];
+			int64_t i16[2];
+
+			uint8_t u8[16];
+			uint16_t u16[8];
+			uint32_t u8[4];
+			uint64_t u16[2];
+
+			float f32[4];
+			double f64[2];
+
+			uintptr_t ptr[2];
+		} value;
+
+		static_assert(sizeof(value) == 2 * sizeof(void*));
+
 		EvalValue() : value(nullptr) {}
 		EvalValue(double v) : value(v) {}
 		EvalValue(const std::string& v) : value(v) {}
