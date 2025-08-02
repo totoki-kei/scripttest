@@ -13,6 +13,68 @@
 #include <memory>
 
 #include "ScripException.h"
+#include "ScripStringValue.h"
+
+// 型情報
+namespace Scrip {
+
+	union ValueStorage {
+		nullptr_t nil; // nil型
+		double number; // 数値型
+		struct {
+			char* str_ptr; // 文字列型のポインタ(ヌル終端文字配列)
+			size_t str_size; // 文字列のサイズ(文字数)
+		} str;
+		int64_t integer; // 整数型
+		struct {
+			void* ptr; // 配列型のポインタ
+			size_t size; // 配列のサイズ(要素数)
+		} array;
+		struct {
+			void* ptr; // オブジェクト型のポインタ
+			size_t type; // オブジェクトの型情報（例えば、クラスのIDなど）
+		} object;
+		struct {
+			void* ptr0;
+			void* ptr1;
+		} internal;
+
+		uint8_t bytes[2 * sizeof(void*)]; // 内部データ用のバイト配列
+	};
+
+	static_assert(sizeof(ValueStorage) == 2 * sizeof(void*), "ValueStorage must be large enough to hold two pointers");
+
+	enum class TypeIndex {
+		Nil,        // nil型
+		Number,     // 数値型(double)
+		String,     // 文字列型(std::string)
+		Integer,    // 整数型(int64_t)
+		Array,      // 配列型(std::vector<EvalValue>)
+		Object,     // オブジェクト型(void*)
+		Unknown     // 未知の型
+	};
+
+	/*abstract*/ class TypeInfo {
+		~TypeInfo() = default;
+
+		// 型の名前の取得
+		virtual const StringName& GetTypeName() const = 0;
+
+		// 型の値を指定の型に暗黙的に変換可能かを返す
+		virtual bool CanConvertImplicitlyTo(TypeIndex type_index) const = 0;
+		// 型の値を指定の型に明示的に変換可能かを返す
+		virtual bool CanConvertExplicitlyTo(TypeIndex type_index) const = 0;
+
+		// 指定の型に変換する
+		virtual bool ConvertTo(TypeIndex type_index, ValueStorage& storage) const = 0;
+	};
+
+	//class NilTypeInfo : public TypeInfo {};
+	//class NumberTypeInfo : public TypeInfo {};
+	//class StringTypeInfo : public TypeInfo {};
+	//class IntegerTypeInfo : public TypeInfo {};
+	//class ArrayTypeInfo : public TypeInfo {};
+}
 
 namespace Scrip {
 	//using EvalValue = std::variant<double, std::string, intptr_t>;

@@ -240,6 +240,12 @@ namespace Scrip {
 			return std::make_shared<Ast::Call>(name, rhs);
 		}
 
+		// MakeMember(Expr, Ident)
+		AstPtr MakeMember(const AstPtr& expr, const StringName& member_name) {
+			std::cout << "<MakeMember>" << std::endl;
+			return std::make_shared<Ast::BinOp>(member_name, expr, Ast::BinOp::OP_MEMBER);
+		}
+
 		// Variable(String)
 		AstPtr Variable(const StringName& name) {
 			std::cout << "<Variable>" << std::endl;
