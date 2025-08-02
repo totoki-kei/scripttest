@@ -171,19 +171,24 @@
   <ItemGroup>
     <ClCompile Include="Scrip.cpp" />
     <ClCompile Include="ScripTest.cpp" />
+    <ClInclude Include="ScripAst.h" />
+    <ClInclude Include="ScripEnvironment.h" />
+    <ClInclude Include="ScripTokenizer.h" />
+    <ClInclude Include="ScripTypes.h" />
+    <ClInclude Include="ScripUtility.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Lambs.hpp" />
     <ClInclude Include="Scrip.h" />
+    <ClInclude Include="ScripEvalValue.h" />
+    <ClInclude Include="ScripException.h" />
     <ClInclude Include="ScripParser.h" />
+    <ClInclude Include="ScripStringValue.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ScripParser.cpg">
       <DeploymentContent>true</DeploymentContent>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="ScripLexer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

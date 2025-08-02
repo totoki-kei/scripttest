@@ -182,12 +182,12 @@ private:
 	   
 };
 
-template <class _Value, class _SemanticAction,
-          unsigned int _StackSize = 0>
+template <class Value, class SemanticAction,
+          unsigned int StackSize = 0>
 class Parser {
 public:
     typedef Token token_type;
-    typedef _Value value_type;
+    typedef Value value_type;
 
     enum Nonterminal {
         Nonterminal_Cond,
@@ -205,7 +205,7 @@ public:
     };
 
 public:
-    Parser(_SemanticAction& sa) : sa_(sa) { reset(); }
+    Parser(SemanticAction& sa) : sa_(sa) { reset(); }
 
     void reset() {
         error_ = false;
@@ -243,7 +243,7 @@ public:
     bool error() { return error_; }
 
 private:
-    typedef Parser<_Value, _SemanticAction, _StackSize> self_type;
+    typedef Parser<Value, SemanticAction, StackSize> self_type;
 
     typedef bool (self_type::*state_type)(token_type, const value_type&);
     typedef int (self_type::*gotof_type)(Nonterminal);
@@ -251,7 +251,7 @@ private:
     bool            accepted_;
     bool            error_;
     value_type      accepted_value_;
-    _SemanticAction& sa_;
+    SemanticAction& sa_;
 
     struct table_entry {
         state_type  state;
@@ -268,7 +268,7 @@ private:
             : entry(e), value(v), sequence_length(sl) {}
     };
 
-    Stack<stack_frame, _StackSize> stack_;
+    Stack<stack_frame, StackSize> stack_;
 
     bool push_stack(int state_index, const value_type& v, int sl = 0) {
         bool f = stack_.push(stack_frame(entry(state_index), v, sl));
@@ -307,7 +307,7 @@ private:
         stack_.commit_tmp();
     }
 
-    void recover(token_type token, const value_type& value) {
+    void recover(Token token, const value_type& value) {
         rollback_tmp_stack();
         error_ = false;
         while(!stack_top()->entry->handle_error) {
@@ -342,10 +342,10 @@ private:
     template <class T>
     class Optional {
     public:
-        typedef Stack<stack_frame, _StackSize> stack_type;
+        typedef Stack<stack_frame, StackSize> stack_type;
 
     public:
-        Optional(_SemanticAction& sa, stack_type& s, const Range& r)
+        Optional(SemanticAction& sa, stack_type& s, const Range& r)
             : sa_(&sa), s_(&s), p_(r.beg == r.end ? -1 : r.beg){}
 
         operator bool() const {
@@ -355,13 +355,13 @@ private:
             return !bool(*this);
         }
         T operator*() const {
-            T v;
+            value_type v;
             sa_->downcast(v, s_->nth(p_).value);
             return v;
         }
 
     private:
-        _SemanticAction* sa_;
+        SemanticAction* sa_;
         stack_type*     s_;
         int             p_;
 
@@ -370,18 +370,14 @@ private:
     template <class T>
     class Sequence {
     public:
-        typedef Stack<stack_frame, _StackSize> stack_type;
+        typedef Stack<stack_frame, StackSize> stack_type;
 
         class const_iterator {
         public:
-            typedef T                       value_type;
-            typedef std::input_iterator_tag iterator_category;
-            typedef value_type              reference;
-            typedef value_type*             pointer;
-            typedef size_t                  difference_type;
+            typedef T value_type;
 
         public:
-            const_iterator(_SemanticAction& sa, stack_type& s, int p)
+            const_iterator(SemanticAction& sa, stack_type& s, int p)
                 : sa_(&sa), s_(&s), p_(p){}
             const_iterator(const const_iterator& x) : s_(x.s_), p_(x.p_){}
             const_iterator& operator=(const const_iterator& x) {
@@ -406,14 +402,14 @@ private:
                 return !((*this)==x);
             }
         private:
-            _SemanticAction* sa_;
+            SemanticAction* sa_;
             stack_type*     s_;
             int             p_;
 
         };
 
     public:
-        Sequence(_SemanticAction& sa, stack_type& stack, const Range& r)
+        Sequence(SemanticAction& sa, stack_type& stack, const Range& r)
             : sa_(sa), stack_(stack), range_(r) {
         }
 
@@ -425,7 +421,7 @@ private:
         }
 
     private:
-        _SemanticAction& sa_;
+        SemanticAction& sa_;
         stack_type&     stack_;
         Range           range_;
 
@@ -504,20 +500,27 @@ private:
         return push_stack(dest_index, value_type());
     }
 
-    bool call_0_MakeDiv(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeDiv(arg0, arg1);
+    bool call_0_ProgramStart(Nonterminal nonterminal, int base) {
+        AstPtr r = sa_.ProgramStart();
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
         return push_stack(dest_index, v);
     }
 
-    bool call_0_MakeMul(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+    bool call_0_Program(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
         AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeMul(arg0, arg1);
+        AstPtr r = sa_.Program(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeNot(Nonterminal nonterminal, int base, int arg_index0) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr r = sa_.MakeNot(arg0);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -527,6 +530,157 @@ private:
     bool call_0_Identity(Nonterminal nonterminal, int base, int arg_index0) {
         AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr r = sa_.Identity(arg0);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeAnd(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeAnd(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeDiffer(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeDiffer(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeEqual(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeEqual(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeGreater(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeGreater(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeGreaterEq(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeGreaterEq(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeLess(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeLess(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeLessEq(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeLessEq(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeOr(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeOr(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_EmptyIdentList(Nonterminal nonterminal, int base) {
+        AstPtr r = sa_.EmptyIdentList();
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeIdentList(Nonterminal nonterminal, int base, int arg_index0) {
+        Sequence<StringName> arg0(sa_, stack_, seq_get_range(base, arg_index0)); 
+        AstPtr r = sa_.MakeIdentList(arg0);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_EmptyList(Nonterminal nonterminal, int base) {
+        AstPtr r = sa_.EmptyList();
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeList(Nonterminal nonterminal, int base, int arg_index0) {
+        Sequence<AstPtr> arg0(sa_, stack_, seq_get_range(base, arg_index0)); 
+        AstPtr r = sa_.MakeList(arg0);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_Variable(Nonterminal nonterminal, int base, int arg_index0) {
+        StringName arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr r = sa_.Variable(arg0);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeCall(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        StringName arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeCall(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_1_Identity(Nonterminal nonterminal, int base, int arg_index0) {
+        EvalValue arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr r = sa_.Identity(arg0);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_Negate(Nonterminal nonterminal, int base, int arg_index0) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr r = sa_.Negate(arg0);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -633,55 +787,40 @@ private:
         return push_stack(dest_index, v);
     }
 
-    bool call_0_Variable(Nonterminal nonterminal, int base, int arg_index0) {
-        StringName arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr r = sa_.Variable(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeCall(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        StringName arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeCall(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_1_Identity(Nonterminal nonterminal, int base, int arg_index0) {
-        EvalValue arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr r = sa_.Identity(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_Negate(Nonterminal nonterminal, int base, int arg_index0) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr r = sa_.Negate(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_ProgramStart(Nonterminal nonterminal, int base) {
-        AstPtr r = sa_.ProgramStart();
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_Program(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+    bool call_0_MakeDiv(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
         AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.Program(arg0, arg1);
+        AstPtr r = sa_.MakeDiv(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeMul(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeMul(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeAdd(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeAdd(arg0, arg1);
+        value_type v; sa_.upcast(v, r);
+        pop_stack(base);
+        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
+        return push_stack(dest_index, v);
+    }
+
+    bool call_0_MakeSub(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
+        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
+        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
+        AstPtr r = sa_.MakeSub(arg0, arg1);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -712,149 +851,6 @@ private:
     bool call_1_VariableDeclaration(Nonterminal nonterminal, int base, int arg_index0) {
         StringName arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
         AstPtr r = sa_.VariableDeclaration(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeAdd(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeAdd(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeSub(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeSub(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_EmptyIdentList(Nonterminal nonterminal, int base) {
-        AstPtr r = sa_.EmptyIdentList();
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeIdentList(Nonterminal nonterminal, int base, int arg_index0) {
-        Sequence<StringName> arg0(sa_, stack_, seq_get_range(base, arg_index0)); 
-        AstPtr r = sa_.MakeIdentList(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_EmptyList(Nonterminal nonterminal, int base) {
-        AstPtr r = sa_.EmptyList();
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeList(Nonterminal nonterminal, int base, int arg_index0) {
-        Sequence<AstPtr> arg0(sa_, stack_, seq_get_range(base, arg_index0)); 
-        AstPtr r = sa_.MakeList(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeNot(Nonterminal nonterminal, int base, int arg_index0) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr r = sa_.MakeNot(arg0);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeAnd(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeAnd(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeDiffer(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeDiffer(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeEqual(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeEqual(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeGreater(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeGreater(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeGreaterEq(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeGreaterEq(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeLess(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeLess(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeLessEq(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeLessEq(arg0, arg1);
-        value_type v; sa_.upcast(v, r);
-        pop_stack(base);
-        int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
-        return push_stack(dest_index, v);
-    }
-
-    bool call_0_MakeOr(Nonterminal nonterminal, int base, int arg_index0, int arg_index1) {
-        AstPtr arg0; sa_.downcast(arg0, get_arg(base, arg_index0));
-        AstPtr arg1; sa_.downcast(arg1, get_arg(base, arg_index1));
-        AstPtr r = sa_.MakeOr(arg0, arg1);
         value_type v; sa_.upcast(v, r);
         pop_stack(base);
         int dest_index = (this->*(stack_top()->entry->gotof))(nonterminal);
@@ -984,8 +980,8 @@ private:
 
     int gotof_5(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_ident_seq0: return 88;
         case Nonterminal_IdentList: return 6;
+        case Nonterminal_ident_seq0: return 88;
         default: assert(0); return false;
         }
     }
@@ -1067,11 +1063,11 @@ private:
 
     int gotof_7(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Statement: return 8;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 20;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Statement: return 8;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1185,10 +1181,10 @@ private:
 
     int gotof_12(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 13;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1293,11 +1289,11 @@ private:
 
     int gotof_15(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Statement: return 89;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 20;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Statement: return 89;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1361,11 +1357,11 @@ private:
 
     int gotof_16(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Statement: return 39;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 20;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Statement: return 39;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1429,11 +1425,11 @@ private:
 
     int gotof_17(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Statement: return 40;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 20;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Statement: return 40;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1497,11 +1493,11 @@ private:
 
     int gotof_18(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Statement: return 44;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 20;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Statement: return 44;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1658,10 +1654,10 @@ private:
 
     int gotof_23(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 24;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -1854,10 +1850,10 @@ private:
 
     int gotof_30(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 32;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -2083,10 +2079,10 @@ private:
 
     int gotof_37(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 38;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -2227,10 +2223,10 @@ private:
 
     int gotof_42(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 43;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -2317,10 +2313,10 @@ private:
 
     int gotof_45(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr: return 46;
         case Nonterminal_Cond: return 47;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 46;
         default: assert(0); return false;
         }
     }
@@ -2428,8 +2424,8 @@ private:
 
     int gotof_48(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 49;
         default: assert(0); return false;
         }
@@ -2488,8 +2484,8 @@ private:
 
     int gotof_50(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 51;
         default: assert(0); return false;
         }
@@ -2548,8 +2544,8 @@ private:
 
     int gotof_52(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 53;
         default: assert(0); return false;
         }
@@ -2608,8 +2604,8 @@ private:
 
     int gotof_54(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 55;
         default: assert(0); return false;
         }
@@ -2668,8 +2664,8 @@ private:
 
     int gotof_56(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 57;
         default: assert(0); return false;
         }
@@ -2728,8 +2724,8 @@ private:
 
     int gotof_58(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 59;
         default: assert(0); return false;
         }
@@ -2788,8 +2784,8 @@ private:
 
     int gotof_60(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 61;
         default: assert(0); return false;
         }
@@ -2848,8 +2844,8 @@ private:
 
     int gotof_62(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 63;
         default: assert(0); return false;
         }
@@ -2911,11 +2907,11 @@ private:
 
     int gotof_64(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
-        case Nonterminal_Unit: return 75;
-        case Nonterminal_Expr_seq0: return 87;
-        case Nonterminal_Expr: return 69;
         case Nonterminal_List: return 84;
+        case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
+        case Nonterminal_Expr: return 69;
+        case Nonterminal_Expr_seq0: return 87;
         default: assert(0); return false;
         }
     }
@@ -2947,8 +2943,8 @@ private:
 
     int gotof_65(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 68;
         default: assert(0); return false;
         }
@@ -2981,8 +2977,8 @@ private:
 
     int gotof_66(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 67;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 67;
         case Nonterminal_Expr: return 70;
         default: assert(0); return false;
         }
@@ -3134,8 +3130,8 @@ private:
 
     int gotof_71(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 72;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 72;
         default: assert(0); return false;
         }
     }
@@ -3204,8 +3200,8 @@ private:
 
     int gotof_73(Nonterminal nonterminal) {
         switch(nonterminal) {
-        case Nonterminal_Term: return 74;
         case Nonterminal_Unit: return 75;
+        case Nonterminal_Term: return 74;
         default: assert(0); return false;
         }
     }

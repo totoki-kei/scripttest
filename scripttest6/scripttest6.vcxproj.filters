@@ -21,15 +21,34 @@
     <ClInclude Include="Scrip.h">
       <Filter>Scrip</Filter>
     </ClInclude>
+    <ClInclude Include="ScripStringValue.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripEvalValue.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripException.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripUtility.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripTokenizer.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripAst.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripTypes.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
+    <ClInclude Include="ScripEnvironment.h">
+      <Filter>Scrip</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ScripParser.cpg">
       <Filter>Scrip</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="ScripLexer.h">
-      <Filter>Scrip</Filter>
-    </Text>
   </ItemGroup>
 </Project>
